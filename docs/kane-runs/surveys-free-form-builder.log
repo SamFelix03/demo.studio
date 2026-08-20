@@ -1,0 +1,293 @@
+# Kane CLI action log
+# job: de0fa318-c51e-4b1e-b207-c9173453dccc
+# url: https://surveys.free/google-forms-alternative/
+# started: 2026-08-20T17:04:56.009Z
+#
+# Each line is one event from Kane CLI (navigate, click, type, assert, wait, heal).
+# This is what Kane actually did in the browser during the demo workflow.
+
+# brief: This demo is to explain how a user is supposed to create a form. Step 1: Type Birthday RSVP in the box under the What do you want to ask Section, Step 2: Click on Create it Free, Step 3: After the new page loads, type Allen's Birthday under the Description text box, Step 4: Click on Add your first question, Step 5: Under the dropdown which says single Line text choose Yes/no, Step 6: In the Question text box type allergies and hit the check-box next to the Required text, Step 7: Click on Save Ch
+17:05:18  preflight  kane [running]  Step 1
+17:05:18  preflight  navigate [done]  navigate: Navigate to https://surveys.free/google-forms-alternative/
+17:05:30  preflight  kane [running]  Step 2
+17:05:59  preflight  analyze [done]  analyze: a cookie or consent banner is visible
+17:05:59  preflight  kane [running]  Step 3
+17:05:59  preflight  kane [running]  Step 1
+17:06:08  preflight  wait [done]  wait: Waiting because no Accept or Close consent control is visible and the banner is absent
+17:06:13  preflight  kane [running]  Step 4
+17:06:13  preflight  assert [done]  assert: the main page content is visible unless one of those blockers is present
+17:06:15  preflight  run_end [passed]  opened the Google Forms alternative page on surveys.free  https://surveys.free/google-forms-alternative/
+17:06:29  understand  kane [running]  Step 1
+17:06:29  understand  navigate [done]  navigate: Navigate to https://surveys.free/google-forms-alternative/
+17:06:40  understand  kane [running]  Step 2
+17:07:28  understand  analyze [done]  analyze: ANALYZE(textual_visual, 'the visible plan or feature names if any are saved as {
+17:07:29  understand  kane [running]  Step 3
+17:07:29  understand  kane [running]  Step 1
+17:07:33  understand  wait [done]  wait: Waiting briefly because no cookie or consent banner is visible to dismiss
+17:07:36  understand  kane [running]  Step 4
+17:07:39  understand  wait [done]  wait: Waiting because all required checkpoint analyses have already passed
+17:07:44  understand  run_end [passed]  extracted page details on surveys.free  https://surveys.free/google-forms-alternative/
+17:08:13  author  test_md_step_start  test_md_step_start
+17:08:16  author  run_start  run_start
+17:08:18  author  step_start  step_start
+17:08:18  author  step_event  step_event
+17:08:18  author  step_event  step_event
+17:08:18  author  step_event  step_event
+17:08:18  author  navigate [passed]  navigate: Navigate to https://surveys.free/google-forms-alternative/
+17:08:19  author  step_event  step_event
+17:08:19  author  step_start  step_start
+17:08:19  author  step_event  step_event
+17:08:19  author  describe_trigger  describe_trigger
+17:08:19  author  step_event  step_event
+17:08:22  author  step_event  step_event
+17:08:24  author  step_event  step_event
+17:08:25  author  step_event  step_event
+17:08:25  author  step_event  step_event
+17:08:25  author  type [passed]  type: Typing Birthday RSVP into the question input field
+17:08:26  author  step_start  step_start
+17:08:26  author  step_event  step_event
+17:08:26  author  describe_trigger  describe_trigger
+17:08:26  author  step_event  step_event
+17:08:29  author  step_event  step_event
+17:08:30  author  step_event  step_event
+17:08:31  author  step_event  step_event
+17:08:31  author  step_event  step_event
+17:08:31  author  type [passed]  type: Typing Birthday RSVP into the What do you want to ask input field
+17:08:32  author  step_start  step_start
+17:08:32  author  step_event  step_event
+17:08:32  author  describe_trigger  describe_trigger
+17:08:32  author  step_event  step_event
+17:08:34  author  step_event  step_event
+17:08:38  author  step_event  step_event
+17:08:42  author  step_event  step_event
+17:08:42  author  step_event  step_event
+17:08:42  author  analyze [passed]  analyze: text "Birthday RSVP" is visible.
+17:08:43  author  step_start  step_start
+17:08:43  author  step_event  step_event
+17:08:43  author  describe_trigger  describe_trigger
+17:08:43  author  step_event  step_event
+17:08:43  author  step_event  step_event
+17:08:43  author  assert [passed]  assert: text "Birthday RSVP" is visible.
+17:08:45  author  run_end [passed]  typed Birthday RSVP on surveys.free  https://surveys.free/google-forms-alternative/
+17:08:45  author  test_md_step_end [passed]  test_md_step_end
+17:08:45  author  test_md_step_start  test_md_step_start
+17:08:48  author  run_start  run_start
+17:08:51  author  step_event  step_event
+17:08:51  author  step_start  step_start
+17:08:51  author  step_event  step_event
+17:08:51  author  describe_trigger  describe_trigger
+17:08:51  author  step_event  step_event
+17:08:54  author  step_event  step_event
+17:08:55  author  step_event  step_event
+17:08:56  author  step_event  step_event
+17:08:56  author  step_event  step_event
+17:08:56  author  click [passed]  click: Clicking Create it free button
+17:08:56  author  step_start  step_start
+17:08:56  author  step_event  step_event
+17:08:56  author  describe_trigger  describe_trigger
+17:08:56  author  step_event  step_event
+17:08:59  author  step_event  step_event
+17:09:02  author  step_event  step_event
+17:09:08  author  step_event  step_event
+17:09:08  author  step_event  step_event
+17:09:08  author  step_event  step_event
+17:09:08  author  step_event  step_event
+17:09:08  author  analyze [passed]  analyze: text "Description" is visible
+17:09:09  author  step_start  step_start
+17:09:09  author  step_event  step_event
+17:09:09  author  describe_trigger  describe_trigger
+17:09:09  author  step_event  step_event
+17:09:09  author  step_event  step_event
+17:09:09  author  assert [passed]  assert: the URL contains "/edit"
+17:09:09  author  step_start  step_start
+17:09:09  author  step_event  step_event
+17:09:09  author  describe_trigger  describe_trigger
+17:09:09  author  step_event  step_event
+17:09:09  author  step_event  step_event
+17:09:09  author  assert [passed]  assert: text "Description" is visible
+17:09:12  author  run_end [passed]  clicked the "Create it free" button on surveys.free  https://surveys.free/a/tgxkZLY7wdiZjLb6RycK4w/edit/
+17:09:12  author  test_md_step_end [passed]  test_md_step_end
+17:09:12  author  test_md_step_start  test_md_step_start
+17:09:15  author  run_start  run_start
+17:09:17  author  step_event  step_event
+17:09:17  author  step_start  step_start
+17:09:17  author  step_event  step_event
+17:09:17  author  describe_trigger  describe_trigger
+17:09:17  author  step_event  step_event
+17:09:20  author  step_event  step_event
+17:09:22  author  step_event  step_event
+17:09:23  author  step_event  step_event
+17:09:23  author  step_event  step_event
+17:09:23  author  type [passed]  type: Typing Allen's Birthday into Description field
+17:09:23  author  step_start  step_start
+17:09:23  author  step_event  step_event
+17:09:23  author  describe_trigger  describe_trigger
+17:09:23  author  step_event  step_event
+17:09:26  author  step_event  step_event
+17:09:27  author  step_event  step_event
+17:09:31  author  step_event  step_event
+17:09:31  author  step_event  step_event
+17:09:31  author  wait [passed]  wait: PRIMARY: wait 4000 ms on the current survey editor page
+17:09:32  author  step_start  step_start
+17:09:32  author  step_event  step_event
+17:09:32  author  describe_trigger  describe_trigger
+17:09:32  author  step_event  step_event
+17:09:35  author  step_event  step_event
+17:09:36  author  step_event  step_event
+17:09:41  author  step_event  step_event
+17:09:41  author  step_event  step_event
+17:09:41  author  analyze [passed]  analyze: text "Description" is visible
+17:09:41  author  step_start  step_start
+17:09:41  author  step_event  step_event
+17:09:41  author  describe_trigger  describe_trigger
+17:09:41  author  step_event  step_event
+17:09:41  author  step_event  step_event
+17:09:41  author  assert [passed]  assert: text "Description" is visible
+17:09:44  author  run_end [passed]  entered description text on surveys.free  https://surveys.free/a/tgxkZLY7wdiZjLb6RycK4w/edit/
+17:09:44  author  test_md_step_end [passed]  test_md_step_end
+17:09:44  author  test_md_step_start  test_md_step_start
+17:09:48  author  run_start  run_start
+17:09:50  author  step_event  step_event
+17:09:50  author  step_start  step_start
+17:09:50  author  step_event  step_event
+17:09:50  author  describe_trigger  describe_trigger
+17:09:50  author  step_event  step_event
+17:09:53  author  step_event  step_event
+17:09:55  author  step_event  step_event
+17:09:56  author  step_event  step_event
+17:09:56  author  step_event  step_event
+17:09:56  author  click [passed]  click: Clicking Add your first question button
+17:09:56  author  step_start  step_start
+17:09:56  author  step_event  step_event
+17:09:56  author  describe_trigger  describe_trigger
+17:09:56  author  step_event  step_event
+17:10:00  author  step_event  step_event
+17:10:01  author  step_event  step_event
+17:10:06  author  step_event  step_event
+17:10:06  author  step_event  step_event
+17:10:06  author  analyze [passed]  analyze: text "question" is visible.
+17:10:07  author  step_start  step_start
+17:10:07  author  step_event  step_event
+17:10:07  author  describe_trigger  describe_trigger
+17:10:07  author  step_event  step_event
+17:10:07  author  step_event  step_event
+17:10:07  author  assert [passed]  assert: text "question" is visible.
+17:10:10  author  run_end [passed]  added the first question on surveys.free  https://surveys.free/a/tgxkZLY7wdiZjLb6RycK4w/edit/
+17:10:10  author  test_md_step_end [passed]  test_md_step_end
+17:10:10  author  test_md_step_start  test_md_step_start
+17:10:13  author  run_start  run_start
+17:10:17  author  step_event  step_event
+17:10:17  author  step_start  step_start
+17:10:17  author  step_event  step_event
+17:10:17  author  describe_trigger  describe_trigger
+17:10:17  author  step_event  step_event
+17:10:20  author  step_event  step_event
+17:10:24  author  step_event  step_event
+17:10:25  author  step_event  step_event
+17:10:25  author  step_event  step_event
+17:10:25  author  select [passed]  select: Selecting Yes / No in the question type dropdown
+17:10:26  author  step_start  step_start
+17:10:26  author  step_event  step_event
+17:10:26  author  describe_trigger  describe_trigger
+17:10:26  author  step_event  step_event
+17:10:31  author  step_event  step_event
+17:10:32  author  step_event  step_event
+17:10:37  author  step_event  step_event
+17:10:37  author  step_event  step_event
+17:10:37  author  wait [passed]  wait: PRIMARY: wait 5000 ms for the camera to hold on the Yes / No question type scree
+17:10:37  author  step_start  step_start
+17:10:37  author  step_event  step_event
+17:10:37  author  describe_trigger  describe_trigger
+17:10:37  author  step_event  step_event
+17:10:41  author  step_event  step_event
+17:10:44  author  step_event  step_event
+17:11:01  author  step_event  step_event
+17:11:01  author  step_event  step_event
+17:11:01  author  analyze [passed]  analyze: text "Required" is visible.
+17:11:01  author  step_start  step_start
+17:11:01  author  step_event  step_event
+17:11:01  author  describe_trigger  describe_trigger
+17:11:01  author  step_event  step_event
+17:11:01  author  step_event  step_event
+17:11:01  author  assert [passed]  assert: text "Required" is visible.
+17:11:04  author  run_end [passed]  changed the question type to Yes/no on surveys.free  https://surveys.free/a/tgxkZLY7wdiZjLb6RycK4w/edit/
+17:11:04  author  test_md_step_end [passed]  test_md_step_end
+17:11:04  author  test_md_step_start  test_md_step_start
+17:11:08  author  run_start  run_start
+17:11:10  author  step_event  step_event
+17:11:10  author  step_start  step_start
+17:11:10  author  step_event  step_event
+17:11:10  author  describe_trigger  describe_trigger
+17:11:10  author  step_event  step_event
+17:11:13  author  step_event  step_event
+17:11:16  author  step_event  step_event
+17:11:17  author  step_event  step_event
+17:11:17  author  step_event  step_event
+17:11:17  author  type [passed]  type: Typing allergies into the question text input
+17:11:18  author  step_start  step_start
+17:11:18  author  step_event  step_event
+17:11:18  author  describe_trigger  describe_trigger
+17:11:18  author  step_event  step_event
+17:11:22  author  step_event  step_event
+17:11:23  author  step_event  step_event
+17:11:23  author  step_event  step_event
+17:11:23  author  step_event  step_event
+17:11:23  author  click [passed]  click: Clicking the Required checkbox in the question editor
+17:11:24  author  step_start  step_start
+17:11:24  author  step_event  step_event
+17:11:24  author  describe_trigger  describe_trigger
+17:11:24  author  step_event  step_event
+17:11:27  author  step_event  step_event
+17:11:30  author  step_event  step_event
+17:11:35  author  step_event  step_event
+17:11:35  author  step_event  step_event
+17:11:35  author  wait [passed]  wait: PRIMARY: wait 5000 ms for the camera to hold on the completed question editor sc
+17:11:36  author  step_start  step_start
+17:11:36  author  step_event  step_event
+17:11:36  author  describe_trigger  describe_trigger
+17:11:36  author  step_event  step_event
+17:11:38  author  step_event  step_event
+17:11:39  author  step_event  step_event
+17:11:45  author  step_event  step_event
+17:11:45  author  step_event  step_event
+17:11:45  author  analyze [passed]  analyze: text "allergies" is visible
+17:11:46  author  step_start  step_start
+17:11:46  author  step_event  step_event
+17:11:46  author  describe_trigger  describe_trigger
+17:11:46  author  step_event  step_event
+17:11:46  author  step_event  step_event
+17:11:46  author  assert [passed]  assert: text "allergies" is visible
+17:11:49  author  run_end [passed]  updated a survey question on surveys.free  https://surveys.free/a/tgxkZLY7wdiZjLb6RycK4w/edit/
+17:11:49  author  test_md_step_end [passed]  test_md_step_end
+17:11:49  author  test_md_step_start  test_md_step_start
+17:11:51  author  run_start  run_start
+17:11:54  author  step_event  step_event
+17:11:54  author  step_start  step_start
+17:11:54  author  step_event  step_event
+17:11:54  author  describe_trigger  describe_trigger
+17:11:54  author  step_event  step_event
+17:11:57  author  step_event  step_event
+17:11:59  author  step_event  step_event
+17:12:00  author  step_event  step_event
+17:12:00  author  step_event  step_event
+17:12:00  author  click [passed]  click: Clicking Save changes button
+17:12:01  author  step_start  step_start
+17:12:01  author  step_event  step_event
+17:12:01  author  describe_trigger  describe_trigger
+17:12:01  author  step_event  step_event
+17:12:03  author  step_event  step_event
+17:12:08  author  step_event  step_event
+17:12:13  author  step_event  step_event
+17:12:13  author  step_event  step_event
+17:12:13  author  wait [passed]  wait: PRIMARY: wait 5000 ms for the camera to hold this saved survey screen
+17:12:14  author  step_start  step_start
+17:12:14  author  step_event  step_event
+17:12:14  author  describe_trigger  describe_trigger
+17:12:14  author  step_event  step_event
+17:12:17  author  step_event  step_event
+17:12:19  author  step_event  step_event
+17:12:19  author  wait [passed]  wait: Waiting objective complete; no further action needed
+17:12:22  author  run_end [passed]  saved changes on surveys.free  https://surveys.free/a/tgxkZLY7wdiZjLb6RycK4w/edit/
+17:12:22  author  test_md_step_end [passed]  test_md_step_end
+17:12:23  author  test_md_summary  test_md_summary
+17:12:23  author  test_md_done  test_md_done

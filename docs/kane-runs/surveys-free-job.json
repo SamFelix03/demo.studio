@@ -1,0 +1,69 @@
+{
+  "mode": "kane",
+  "input": {
+    "website_url": "https://surveys.free/google-forms-alternative/",
+    "product_name": "surveys.free",
+    "i_have_right_to_record": true,
+    "compare_after": false,
+    "viewport": "1440x900",
+    "script": "This demo is to explain how a user is supposed to create a form. Step 1: Type Birthday RSVP in the box under the What do you want to ask Section, Step 2: Click on Create it Free, Step 3: After the new page loads, type Allen's Birthday under the Description text box, Step 4: Click on Add your first question, Step 5: Under the dropdown which says single Line text choose Yes/no, Step 6: In the Question text box type allergies and hit the check-box next to the Required text, Step 7: Click on Save Changes",
+    "beats": [
+      {
+        "id": "beat-1",
+        "title": "Form title",
+        "action": "Type Birthday RSVP into the text box under the heading What do you want to ask.",
+        "targetText": "What do you want to ask",
+        "success": { "visibleText": "Birthday RSVP" },
+        "narration": "The form starts with a title. Birthday RSVP is what this survey is about."
+      },
+      {
+        "id": "beat-2",
+        "title": "Create it free",
+        "action": "Click the button labeled Create it free.",
+        "targetText": "Create it free",
+        "success": { "urlContains": "/edit", "visibleText": "Description" },
+        "narration": "Create it free opens the builder so the survey can be edited on the next page."
+      },
+      {
+        "id": "beat-3",
+        "title": "Description",
+        "action": "Type Allen's Birthday into the Description text box.",
+        "targetText": "Description",
+        "success": { "visibleText": "Allen's Birthday" },
+        "narration": "Description tells guests this RSVP is for Allen's Birthday."
+      },
+      {
+        "id": "beat-4",
+        "title": "Add first question",
+        "action": "Click Add your first question.",
+        "targetText": "Add your first question",
+        "success": { "visibleText": "question" },
+        "narration": "Add your first question opens the control for choosing a question type."
+      },
+      {
+        "id": "beat-5",
+        "title": "Yes/no type",
+        "action": "Open the question type dropdown that says Single line text and choose Yes/no.",
+        "targetText": "Yes/no",
+        "success": { "visibleText": "Yes/no" },
+        "narration": "Yes or no is the question type, so guests can answer with a simple choice."
+      },
+      {
+        "id": "beat-6",
+        "title": "Allergies required",
+        "action": "Type allergies into the Question text box, then check the checkbox labeled Required.",
+        "targetText": "Required",
+        "success": { "visibleText": "allergies" },
+        "narration": "The question asks about allergies and Required means every guest has to answer."
+      },
+      {
+        "id": "beat-7",
+        "title": "Save Changes",
+        "action": "Click Save Changes.",
+        "targetText": "Save Changes",
+        "success": { "visibleText": "Save Changes" },
+        "narration": "Save Changes stores the form so the Birthday RSVP is ready to share."
+      }
+    ]
+  }
+}

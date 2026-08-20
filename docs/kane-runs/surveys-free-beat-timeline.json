@@ -1,0 +1,42 @@
+{
+  "capturePath": "/var/folders/_d/9x_l3kfd1xl4sf9tz3qj4xbh0000gn/T/demo-studio/de0fa318-c51e-4b1e-b207-c9173453dccc/pw-video/page@d7379538a42c32f5f6045d9395b20a21.webm",
+  "windows": [
+    {
+      "beatIndex": 0,
+      "startMs": 3382,
+      "endMs": 34877
+    },
+    {
+      "beatIndex": 1,
+      "startMs": 34877,
+      "endMs": 35277
+    },
+    {
+      "beatIndex": 2,
+      "startMs": 34876,
+      "endMs": 94142
+    },
+    {
+      "beatIndex": 3,
+      "startMs": 94142,
+      "endMs": 94542
+    },
+    {
+      "beatIndex": 4,
+      "startMs": 3382,
+      "endMs": 173894
+    },
+    {
+      "beatIndex": 5,
+      "startMs": 173894,
+      "endMs": 218898
+    },
+    {
+      "beatIndex": 6,
+      "startMs": 218898,
+      "endMs": 253468
+    }
+  ],
+  "t0": 1787245690328,
+  "tEnd": 1787245943796
+}
