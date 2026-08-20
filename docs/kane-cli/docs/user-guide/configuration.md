@@ -1,0 +1,253 @@
+# Configuration
+
+kane-cli stores persistent settings at `~/.testmuai/kaneai/tui-config.json`. Most settings are managed through `kane-cli config` subcommands; a few are managed through interactive pickers in TUI mode, and one (the code-export block) is toggled from the TUI menu.
+
+This page covers the persistent settings stored in `tui-config.json`. Authentication credentials are managed separately under `~/.testmuai/kaneai/profiles/` — see [authentication.md](./authentication.md).
+
+## Viewing settings
+
+Print the current configuration with:
+
+```bash
+kane-cli config show
+```
+
+The output groups settings under three headings:
+
+```text
+Configuration
+
+Auth
+  method   oauth | basic (user@example.com) | not configured
+  profile  default
+  env      prod
+
+Defaults
+  url      https://kaneai-playground.lambdatest.io
+  model    v16-alpha
+  mode     testing
+  window   1920x1080
+  project  (none)
+  folder   (none)
+
+Paths
+  chrome   /Users/you/.testmuai/kaneai/chrome-profiles/work
+```
+
+Empty fields are shown as `(none)`. The `chrome` path is empty by default, in which case kane-cli launches Chrome with a temporary profile each run.
+
+## Settings reference
+
+Every field in `tui-config.json`:
+
+| Field | Type | Default | Description | How to change |
+|-------|------|---------|-------------|---------------|
+| `window_size.width` | integer | `1920` | Chrome window width in pixels (800–3840) | `kane-cli config set-window <WxH>` |
+| `window_size.height` | integer | `1080` | Chrome window height in pixels (600–2160) | `kane-cli config set-window <WxH>` |
+| `chrome_profile_path` | string | `""` | Filesystem path to a Chrome user-data dir. Empty means a fresh, temporary profile is used per run. | `kane-cli config chrome-profile [path]` |
+| `default_url` | string \| null | `https://kaneai-playground.lambdatest.io` | Default start URL for a run, used when neither `--url` nor a test.md `url:` key supplies one. The built-in playground value is treated as "unset". See [Default start URL](#default-start-url). | `kane-cli config set-url <url>` |
+| `target` | `"desktop"` \| `"emulator"` \| `"simulator"` | `"desktop"` | Default run target. `desktop` runs the Chrome browser (the default); `emulator` and `simulator` run against a virtual Android or iOS device (macOS Apple Silicon only). See [Mobile target](#mobile-target). | `kane-cli config set-target <desktop\|emulator\|simulator>` |
+| `device` | string \| null | `null` | Default mobile device, by name, serial, `ip:port`, or udid. When empty, a TTY run prompts once and saves the choice; a non-interactive run needs `--device` or this key set. Ignored on the `desktop` target. | `kane-cli config set-device <id>` |
+| `app` | string \| null | `null` | Default app under test for mobile runs: a build path (`.apk` / `.zip`) or an uploaded app id. Ignored on the `desktop` target. | `kane-cli config set-app <path\|APPid>` |
+| `model` | string | `"v16-alpha"` | Reasoning + vision model used by the agent. | (internal default) |
+| `project_id` | string \| null | `null` | TestmuAI TMS project ID for upload | `kane-cli config project [id]` |
+| `project_name` | string \| null | `null` | Display name of the selected project (set automatically by the picker) | set by `kane-cli config project` |
+| `folder_id` | string \| null | `null` | TestmuAI TMS folder ID for upload | `kane-cli config folder [id]` |
+| `folder_name` | string \| null | `null` | Display name of the selected folder (set automatically by the picker) | set by `kane-cli config folder` |
+| `mode` | `"action"` \| `"testing"` | `"testing"` | Agent behaviour when the run hits an authentication wall, blocked page, or error page. See below. | `kane-cli config set-mode <action\|testing>` |
+| `bug_detection` | `"off"` \| `"stop"` \| `"continue"` | `"off"` | Whether the agent flags suspected product bugs while authoring. See [Bug detection](#bug-detection). | `kane-cli config set-bug-detection <mode>`, or per-run `--bug-detection` |
+| `code_export.enabled` | boolean | `false` | Whether to generate a code export after the upload pipeline completes (requires a TMS upload). | TUI menu, or per-run `--code-export` flag |
+| `code_export.language` | `"python"` | `"python"` | Output language for the generated code. Only `python` is supported today. | per-run `--code-language <lang>` |
+| `code_export.skip_validation` | boolean | `true` | Skip the post-codegen worker-side validation step. | TUI menu, or per-run `--skip-code-validation` / `--no-skip-code-validation` |
+
+## Updating settings
+
+### Window size
+
+The Chrome window is launched at the configured resolution. Update it from the CLI:
+
+```bash
+kane-cli config set-window 1280x800
+```
+
+The format is `WIDTHxHEIGHT` (lowercase `x` separator). Width must be between 800 and 3840; height must be between 600 and 2160. Invalid values are rejected without changing the saved config.
+
+In TUI mode, the same setting can be edited through an interactive window-size picker that lets you type the width and height, validates the bounds, and previews the new size before saving.
+
+### Default start URL
+
+kane-cli needs a start URL for the first navigation of a run. It resolves one in this order, first match wins:
+
+1. The `--url <url>` flag on `kane-cli run` / `kane-cli testmd run`.
+2. (test.md only) the `url:` key in the file's frontmatter.
+3. The configured `default_url` — set with `config set-url`.
+
+```bash
+kane-cli config set-url https://app.example.com
+```
+
+Bare domains are accepted and normalized — `config set-url example.com` stores `https://example.com`. The value is rejected without changing the saved config if it is not a valid URL. The built-in playground value (`https://kaneai-playground.lambdatest.io`) counts as "unset", so a fresh install behaves as if no default were configured.
+
+In TUI mode, set the same value with `/config set-url <url>`, or pick **Default URL** from the interactive `/config` menu.
+
+If none of the three sources supplies a URL, kane-cli falls back to a site named in the objective itself (e.g. "Go to amazon.com and …"). When nothing provides a start URL at all, an interactive terminal asks you for one, while a non-interactive (CI) run fails — pass `--allow-missing-url` to a non-TTY run to proceed from the browser's current page instead. See [running-tests.md](./running-tests.md#run-options).
+
+### TMS project
+
+```bash
+kane-cli config project
+```
+
+In a TTY, this opens an interactive project picker. The picker fetches the projects available to your active profile, lets you search and arrow-key through them, and saves the chosen `project_id` and `project_name`. Either OAuth or basic-auth credentials are sufficient — you no longer have to also store a username/access-key pair to use the picker.
+
+You can also set a project ID directly without the picker:
+
+```bash
+kane-cli config project <project-id>
+```
+
+In a non-interactive shell (CI, pipes), pass an explicit `<project-id>`. To discover the right ID first, use `kane-cli projects list` (see [test-manager-integration.md](./test-manager-integration.md)).
+
+If you don't configure a project at all, kane-cli auto-resolves a sensible default when the first run starts — see "Auto-default on first run" in [test-manager-integration.md](./test-manager-integration.md).
+
+### TMS folder
+
+```bash
+kane-cli config folder
+```
+
+Opens an interactive folder picker for the currently selected project. Folders are searchable and shown with their hierarchy. The picker writes both `folder_id` and `folder_name`. You must have a project selected first. OAuth and basic-auth profiles are both supported.
+
+To set a folder ID without the picker:
+
+```bash
+kane-cli config folder <folder-id>
+```
+
+For scripted discovery in non-TTY contexts, use `kane-cli folders list` — see [test-manager-integration.md](./test-manager-integration.md).
+
+### Self-healing for stale IDs
+
+If a previously-configured project or folder later becomes unusable (deleted, renamed, you lost access, or you typed an invalid ID by accident), kane-cli detects the bad ID on the next run, clears it, and auto-resolves a new default instead of letting the run proceed with a dead value and silently failing the upload. To rebind explicitly, run `kane-cli config project` again (or `kane-cli projects list` followed by `kane-cli config project <id>`).
+
+### Mode
+
+```bash
+kane-cli config set-mode action
+kane-cli config set-mode testing
+```
+
+`mode` controls how the agent behaves when a run hits an authentication wall, a blocked page, or an error page:
+
+- **`testing`** (default) — the agent treats those pages as part of the run and continues. Use this when you have set up the test and expect the agent to push through gates that would otherwise stop a real user.
+- **`action`** — the agent hard-stops on authentication, blocked, and error pages so you can intervene manually before the run proceeds.
+
+You can override the saved mode for a single run with `--mode <action|testing>` on `kane-cli run`.
+
+### Mobile target
+
+On macOS Apple Silicon, kane-cli can run against a virtual mobile device instead of the desktop browser. Three settings persist the default target and how to reach it. They are a **separate axis** from `mode` above: `mode` tunes agent behaviour, while these choose *what device* a run drives.
+
+```bash
+kane-cli config set-target emulator          # desktop | emulator | simulator
+kane-cli config set-device pixel-7           # name, serial, ip:port, or udid
+kane-cli config set-app ./builds/app-debug.apk
+```
+
+- **`target`**: `desktop` (the default) runs Chrome; `emulator` runs a virtual Android device and `simulator` a virtual iOS device. Existing web runs are unaffected.
+- **`device`**: the device a mobile run selects, by name, serial, `ip:port`, or udid. When unset, a TTY run prompts once and saves the choice; non-interactive runs need it set (or `--device`).
+- **`app`**: the app under test for a mobile run: a build path (emulator `.apk`, simulator `.zip`) or an uploaded app id (`APP` followed by six or more digits). Required for every mobile run. On the `desktop` target, `device` and `app` are ignored.
+
+A run reads these as its defaults; override any of them for a single run with `--target`, `--device`, and `--app`. Setup and the full list of accepted app formats are in [Mobile testing](./mobile/overview.md).
+
+### Bug detection
+
+```bash
+kane-cli config set-bug-detection continue
+```
+
+`bug_detection` controls whether the agent watches for **product bugs** — not test failures — while it authors steps. When enabled, the agent can flag a suspicious behaviour mid-run (a broken flow, a wrong value, an error where none should be); the suspicion is investigated, and either rejected (the run continues, nothing fails) or confirmed as a product bug:
+
+- **`off`** (default) — no bug detection; behaviour is identical to previous releases.
+- **`stop`** — a confirmed product bug fails the step and ends the run.
+- **`continue`** — the confirmed bug is recorded (in the run result and the [evidence pack](./evidence.md)) and the run keeps going.
+
+This applies to **authoring** steps only. Replayed steps don't need it: a failed replay is always investigated automatically, regardless of this setting.
+
+Override the saved value for a single run with `--bug-detection <off|stop|continue>` on `kane-cli run`, `kane-cli testmd run`, or `kane-cli testrun run`. The setting appears in the TUI Config screen as **Bug Detection** and in `kane-cli config show` output.
+
+### Code export
+
+The `code_export` block enables and configures generated code output that is produced after a successful TMS upload. There is no `kane-cli config` subcommand for this block. Set it from one of:
+
+- **The TUI** — open the config menu, choose Code Export, and toggle the `enabled` and `skip_validation` switches. The TUI writes the change back to `tui-config.json`.
+- **Per-run flags** on `kane-cli run`:
+  - `--code-export` to enable for this run only.
+  - `--code-language <lang>` to pick the output language (only `python` is supported today).
+  - `--skip-code-validation` / `--no-skip-code-validation` to control post-codegen worker-side validation.
+
+Code export requires a TMS upload to run, so it is only meaningful when `mode` is `testing` and a project/folder are configured (or auto-defaulted). See [test-manager-integration.md](./test-manager-integration.md) for the full upload pipeline.
+
+## Chrome management
+
+### Chrome profile
+
+By default, `chrome_profile_path` is empty and kane-cli launches Chrome with a fresh, temporary user-data directory each run. A clean per-run profile keeps state out of your everyday browser, isolates cookies and storage between runs, and prevents extensions, password autofill, or signed-in sessions from leaking into automation.
+
+When you select a named Chrome profile, kane-cli stores it under `~/.testmuai/kaneai/chrome-profiles/<name>` and reuses that directory across runs. This is useful when a test depends on having a logged-in session, a saved address, or a specific extension installed.
+
+### Choosing a different profile
+
+```bash
+kane-cli config chrome-profile
+```
+
+In a TTY, this opens an interactive Chrome-profile picker. The picker lists every profile under `~/.testmuai/kaneai/chrome-profiles/` plus a "temporary" entry that clears the path back to empty (per-run fresh profiles). You can also create a new named profile from the picker — kane-cli creates the directory under `~/.testmuai/kaneai/chrome-profiles/<name>` and saves the path.
+
+To set a path directly without the picker:
+
+```bash
+kane-cli config chrome-profile /absolute/path/to/profile
+```
+
+### Headless mode
+
+To run Chrome without a visible window, pass `--headless` on `kane-cli run`:
+
+```bash
+kane-cli run "Verify the home page loads" --headless
+```
+
+Headless mode is per-run; there is no persistent setting in `tui-config.json`. It is the right choice for CI and other environments without a display.
+
+### Window size
+
+The Chrome window dimensions used for both headed and headless modes come from the `window_size` setting. See [Window size](#window-size) above to update them.
+
+### Chrome environment variables
+
+A handful of environment variables control how kane-cli locates and launches Chrome. They are read from the process environment, not from `tui-config.json`, so they are convenient for CI and one-off overrides.
+
+| Variable | Effect |
+|----------|--------|
+| `KANE_CLI_CHROME_PATH` | Absolute path to the Chrome binary. Use it when Chrome is installed somewhere kane-cli does not search by default. |
+| `KANE_CLI_SKIP_BROWSER_DOWNLOAD` | Any truthy value (`1` / `true` / `yes`) bypasses the Chrome-availability startup check; kane-cli then uses whatever `chrome` resolves on `PATH`. Useful in air-gapped or pre-provisioned CI images. |
+| `KANE_CLI_CDP_TIMEOUT_MS` | Per-attempt timeout, in milliseconds, for Chrome to become reachable over the DevTools Protocol. Default `30000`. Raise it on slow or cold CI runners. |
+| `KANE_CLI_CDP_RETRIES` | Extra Chrome launch attempts after the first when CDP readiness fails. Default `2` (so up to three attempts total); set `0` for a single attempt. Each retry uses a short backoff. |
+
+The CDP timeout and retry settings only affect transient launch failures (Chrome started but did not become reachable in time) — a missing or invalid binary fails immediately without retrying. See [Chrome failed to launch](./troubleshooting.md#chrome-failed-to-launch) for the matching troubleshooting steps.
+
+## Resetting settings
+
+There is no `kane-cli config reset` subcommand today. To reset persistent settings to defaults, delete the config file:
+
+```bash
+rm ~/.testmuai/kaneai/tui-config.json
+```
+
+kane-cli will recreate the file with defaults the next time it writes a setting. This only resets `tui-config.json`. It does **not** affect:
+
+- Authentication credentials under `~/.testmuai/kaneai/profiles/` (use `kane-cli logout` to remove those).
+- Session history under `~/.testmuai/kaneai/sessions/`.
+- Variables under `~/.testmuai/kaneai/variables/` and `.testmuai/variables/`.
+- Chrome profiles under `~/.testmuai/kaneai/chrome-profiles/`.
