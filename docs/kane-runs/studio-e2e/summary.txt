@@ -1,0 +1,13 @@
+=== kane/api_health_test.md ===
+PASS exit=0 kane/api_health_test.md
+=== kane/studio_landing_test.md ===
+PASS exit=0 kane/studio_landing_test.md
+=== kane/studio_test.md ===
+PASS exit=0 kane/studio_test.md
+=== kane/studio_wizard_test.md ===
+PASS exit=0 kane/studio_wizard_test.md
+=== kane/studio_validation_test.md ===
+PASS exit=0 kane/studio_validation_test.md
+=== kane/studio_gallery_test.md ===
+PASS exit=0 kane/studio_gallery_test.md
+SUITE_EXIT=0
