@@ -62,11 +62,10 @@ export const jobInputSchema = z.object({
   headless: z.boolean().optional(),
   require_script_confirm: z.boolean().optional(),
   i_have_right_to_record: z.boolean().optional(),
-  compare_after: z.boolean().optional(),
 });
 
 export const createJobBodySchema = z.object({
-  mode: z.enum(["kane", "naive"]),
+  mode: z.literal("kane").default("kane"),
   input: jobInputSchema,
   parent_job_id: z.string().uuid().optional(),
 });

@@ -21,11 +21,7 @@ import {
   beatSchema,
 } from "@demo-studio/shared";
 
-import {
-  KaneDemoWorkflow,
-  NaiveDemoWorkflow,
-  confirmScriptSignal,
-} from "@demo-studio/workflows";
+import { KaneDemoWorkflow, confirmScriptSignal } from "@demo-studio/workflows";
 
 loadDotEnv();
 const cfg = loadConfig();
@@ -79,7 +75,8 @@ async function main() {
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.flatten() });
     }
-    const { mode, input, parent_job_id } = parsed.data;
+    const { input, parent_job_id } = parsed.data;
+    const mode = "kane" as const;
     const sample = cfg.sampleAppUrl.replace(/\/$/, "");
     if (!input.website_url.startsWith(sample) && !input.i_have_right_to_record) {
       return reply.code(400).send({
@@ -104,44 +101,18 @@ async function main() {
     });
     const workflowId = `demo-${mode}-${id}`;
     await updateJob(db, id, { workflow_id: workflowId, status: "queued" });
-    const handle =
-      mode === "kane"
-        ? await client.workflow.start(KaneDemoWorkflow, {
-            taskQueue: "control",
-            workflowId,
-            args: [
-              {
-                jobId: id,
-                input: { ...input, credentials: secrets },
-                hasCredentials: Boolean(secrets?.username || secrets?.password),
-              },
-            ],
-            workflowRunTimeout: "2 hours",
-          })
-        : await client.workflow.start(NaiveDemoWorkflow, {
-            taskQueue: "control",
-            workflowId,
-            args: [{ jobId: id, input: { ...input, credentials: secrets } }],
-            workflowRunTimeout: "2 hours",
-          });
-    void handle;
-    if (mode === "kane" && input.compare_after) {
-      const naiveId = randomUUID();
-      const naiveWf = `demo-naive-${naiveId}`;
-      await insertJob(db, {
-        id: naiveId,
-        mode: "naive",
-        input: stored as typeof input,
-        parent_job_id: id,
-      });
-      await updateJob(db, naiveId, { workflow_id: naiveWf, status: "queued" });
-      await client.workflow.start(NaiveDemoWorkflow, {
-        taskQueue: "control",
-        workflowId: naiveWf,
-        args: [{ jobId: naiveId, input: { ...input, credentials: secrets } }],
-        workflowRunTimeout: "2 hours",
-      });
-    }
+    void (await client.workflow.start(KaneDemoWorkflow, {
+      taskQueue: "control",
+      workflowId,
+      args: [
+        {
+          jobId: id,
+          input: { ...input, credentials: secrets },
+          hasCredentials: Boolean(secrets?.username || secrets?.password),
+        },
+      ],
+      workflowRunTimeout: "2 hours",
+    }));
     return reply.code(201).send(await getJob(db, id));
   });
 

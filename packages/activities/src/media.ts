@@ -535,13 +535,3 @@ export async function assembleDemo(args: {
   await emitEvent(args.jobId, "phase", { phase: "completed", objectKey });
   return { objectKey, captionsKey, timelineKey };
 }
-
-export async function writeComparison(args: {
-  parentJobId: string;
-  kaneGates: number;
-  naiveGates: number;
-  heals: number;
-}) {
-  const body = JSON.stringify(args, null, 2);
-  await putObject(prefix("kane", args.parentJobId, "out/comparison.json"), body, "application/json");
-}

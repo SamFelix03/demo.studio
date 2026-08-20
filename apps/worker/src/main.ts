@@ -12,12 +12,7 @@ const workflowsPath = fileURLToPath(
 async function run() {
   const cfg = loadConfig();
   const connection = await NativeConnection.connect({ address: cfg.temporalAddress });
-  const queues = [
-    TASK_QUEUES.control,
-    TASK_QUEUES.kane,
-    TASK_QUEUES.playwright,
-    TASK_QUEUES.media,
-  ];
+  const queues = [TASK_QUEUES.control, TASK_QUEUES.kane, TASK_QUEUES.media];
   const workers = await Promise.all(
     queues.map((taskQueue) =>
       Worker.create({

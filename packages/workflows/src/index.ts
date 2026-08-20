@@ -24,13 +24,6 @@ const media = proxyActivities<typeof activities>({
   taskQueue: TASK_QUEUES.media,
 });
 
-const pw = proxyActivities<typeof activities>({
-  startToCloseTimeout: "20 minutes",
-  heartbeatTimeout: "60 seconds",
-  retry: { maximumAttempts: 2 },
-  taskQueue: TASK_QUEUES.playwright,
-});
-
 export const confirmScriptSignal = defineSignal<[Beat[]]>("confirmScript");
 
 const ABORT_TYPES = new Set([
@@ -63,13 +56,11 @@ function failureInfo(err: unknown): { message: string; type: string } {
   return { message: String(err), type: "failed" };
 }
 
-async function persistFailure(jobId: string, err: unknown, mode?: "kane" | "naive") {
-  if (mode === "kane") {
-    try {
-      await control.publishKaneLog({ jobId, mode: "kane" });
-    } catch {
-      /* log is best-effort */
-    }
+async function persistFailure(jobId: string, err: unknown) {
+  try {
+    await control.publishKaneLog({ jobId, mode: "kane" });
+  } catch {
+    /* log is best-effort */
   }
   const { message, type } = failureInfo(err);
   const aborted = ABORT_TYPES.has(type);
@@ -203,42 +194,6 @@ export async function KaneDemoWorkflow(args: {
         /* ignore */
       }
     }
-    await persistFailure(args.jobId, err, "kane");
-    throw err;
-  }
-}
-
-export async function NaiveDemoWorkflow(args: {
-  jobId: string;
-  input: JobInput;
-}): Promise<{ status: string }> {
-  try {
-    await control.setJobStep(args.jobId, "naive_record");
-    await control.setJobStep(args.jobId, "plan");
-    const planned = await control.planDemoBeats({
-      jobId: args.jobId,
-      mode: "naive",
-      input: args.input,
-    });
-    const beats = planned.beats;
-    const tts = await media.synthesizeBeats({
-      jobId: args.jobId,
-      mode: "naive",
-      beats,
-      engine: args.input.voice?.engine,
-    });
-    const rec = await pw.naiveRecord({ jobId: args.jobId, input: args.input, beats });
-    await media.assembleDemo({
-      jobId: args.jobId,
-      mode: "naive",
-      beats,
-      seconds: tts.seconds,
-      videoPath: rec.videoPath,
-      websiteUrl: args.input.website_url,
-      productName: args.input.product_name,
-    });
-    return { status: "completed" };
-  } catch (err) {
     await persistFailure(args.jobId, err);
     throw err;
   }

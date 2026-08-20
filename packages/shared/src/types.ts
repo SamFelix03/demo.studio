@@ -39,7 +39,6 @@ export interface JobInput {
   headless?: boolean;
   require_script_confirm?: boolean;
   i_have_right_to_record?: boolean;
-  compare_after?: boolean;
 }
 
 export interface Artifact {
@@ -89,7 +88,6 @@ export interface KaneRunResult {
 export const TASK_QUEUES = {
   control: "control",
   kane: "kane-chrome",
-  playwright: "playwright",
   media: "media",
 } as const;
 
