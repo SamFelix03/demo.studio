@@ -262,21 +262,64 @@ async function sealBeat(silentVideo: string, wav: string, seconds: number, outMp
 
 async function lmntSpeech(apiKey: string, voice: string, text: string, wavPath: string): Promise<boolean> {
   try {
-    const res = await fetch("https://api.lmnt.com/v1/ai/speech", {
+    const headers = {
+      "X-API-Key": apiKey.trim(),
+      "lmnt-version": "1.2",
+      "Content-Type": "application/json",
+    };
+    const body = JSON.stringify({ text: text.slice(0, 5000), voice, format: "mp3" });
+    // Binary endpoint — /v1/ai/speech returns JSON+base64, not raw audio.
+    let res = await fetch("https://api.lmnt.com/v1/ai/speech/bytes", {
       method: "POST",
-      headers: {
-        "X-API-Key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text: text.slice(0, 5000), voice, format: "mp3" }),
+      headers,
+      body,
     });
-    if (!res.ok) return false;
-    const buf = Buffer.from(await res.arrayBuffer());
+    let buf: Buffer;
+    if (res.ok) {
+      buf = Buffer.from(await res.arrayBuffer());
+    } else {
+      res = await fetch("https://api.lmnt.com/v1/ai/speech", { method: "POST", headers, body });
+      if (!res.ok) {
+        console.error("lmnt speech failed", res.status, (await res.text()).slice(0, 400));
+        return false;
+      }
+      const json = (await res.json()) as { audio?: string };
+      if (!json.audio) return false;
+      buf = Buffer.from(json.audio, "base64");
+    }
+    if (buf.length > 0 && buf[0] === 0x7b) {
+      const json = JSON.parse(buf.toString("utf8")) as { audio?: string };
+      if (!json.audio) return false;
+      buf = Buffer.from(json.audio, "base64");
+    }
     const mp3 = wavPath.replace(/\.wav$/, ".mp3");
     writeFileSync(mp3, buf);
-    await execFileAsync("ffmpeg", ["-y", "-i", mp3, "-ar", String(AR), "-ac", "1", wavPath], { timeout: 30_000 });
+    await execFileAsync("ffmpeg", ["-y", "-i", mp3, "-ar", String(AR), "-ac", "1", wavPath], {
+      timeout: 30_000,
+    });
     return true;
-  } catch {
+  } catch (err) {
+    console.error("lmnt speech error", err);
+    return false;
+  }
+}
+
+/** Neural TTS via Microsoft Edge (much better than espeak on Linux). */
+async function edgeTtsSpeech(text: string, wavPath: string): Promise<boolean> {
+  const mp3 = wavPath.replace(/\.wav$/, ".edge.mp3");
+  const voice = process.env.EDGE_TTS_VOICE || "en-US-JennyNeural";
+  try {
+    await execFileAsync(
+      "edge-tts",
+      ["--voice", voice, "--text", text, "--write-media", mp3],
+      { timeout: 90_000 },
+    );
+    await execFileAsync("ffmpeg", ["-y", "-i", mp3, "-ar", String(AR), "-ac", "1", wavPath], {
+      timeout: 30_000,
+    });
+    return true;
+  } catch (err) {
+    console.error("edge-tts failed", err);
     return false;
   }
 }
@@ -291,33 +334,45 @@ export async function synthesizeBeats(args: {
   mkdirSync(dir, { recursive: true });
   const seconds: number[] = [];
   const wavs: string[] = [];
+  const engines: string[] = [];
   for (let i = 0; i < args.beats.length; i++) {
     const raw = join(dir, `beat-${i}-raw.wav`);
     const wav = join(dir, `beat-${i}.wav`);
     const text = args.beats[i].narration;
     try {
       const lmntOk = cfg.lmntApiKey
-        ? await lmntSpeech(cfg.lmntApiKey, cfg.lmntVoice, text, raw)
+        ? await lmntSpeech(cfg.lmntApiKey, process.env.LMNT_VOICE || cfg.lmntVoice, text, raw)
         : false;
-      if (lmntOk) {
-        /* raw wav from LMNT mp3 */
-      } else if (process.platform === "darwin") {
-        await ff("say", ["-o", raw, "--data-format=LEF32@22050", text]);
-      } else {
-        writeFileSync(raw.replace(/\.wav$/, ".txt"), text);
-        await ff("espeak", ["-w", raw, text]).catch(async () => {
-          await ff("ffmpeg", [
-            "-f",
-            "lavfi",
-            "-i",
-            `anullsrc=r=${AR}:cl=mono`,
-            "-t",
-            "3",
-            "-y",
-            raw,
-          ]);
-        });
+      let engine = lmntOk ? "lmnt" : "";
+      if (!lmntOk) {
+        if (await edgeTtsSpeech(text, raw)) {
+          engine = "edge-tts";
+        } else if (process.platform === "darwin") {
+          await ff("say", ["-o", raw, "--data-format=LEF32@22050", text]);
+          engine = "say";
+        } else {
+          writeFileSync(raw.replace(/\.wav$/, ".txt"), text);
+          const spoken = await ff("espeak-ng", ["-w", raw, text])
+            .catch(() => ff("espeak", ["-w", raw, text]))
+            .catch(() => null);
+          if (spoken) {
+            engine = "espeak";
+          } else {
+            await ff("ffmpeg", [
+              "-f",
+              "lavfi",
+              "-i",
+              `anullsrc=r=${AR}:cl=mono`,
+              "-t",
+              "3",
+              "-y",
+              raw,
+            ]);
+            engine = "silence";
+          }
+        }
       }
+      engines.push(engine);
       await ff("ffmpeg", [
         "-y",
         "-i",
@@ -339,9 +394,10 @@ export async function synthesizeBeats(args: {
     } catch {
       seconds.push(3);
       wavs.push(wav);
+      engines.push("error");
     }
   }
-  await emitEvent(args.jobId, "phase", { phase: "tts", seconds });
+  await emitEvent(args.jobId, "phase", { phase: "tts", seconds, engines });
   return { seconds, wavs };
 }
 
