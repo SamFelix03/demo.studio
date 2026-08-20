@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+FROM mcr.microsoft.com/playwright:v1.50.1-noble
+
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg unzip ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+COPY apps ./apps
+COPY packages ./packages
+COPY infra ./infra
+COPY kane ./kane
+
+RUN npm ci && npx playwright install --with-deps chromium \
+  && npm i -g @testmuai/kane-cli@0.8.4 @testmuai/kane-cli-linux-x64@0.8.4
+
+ENV KANE_HEADLESS=1
+ENV KANE_CLI_SYSTEM_NODE=1
+ENV NODE_ENV=production
+
+COPY infra/docker-entrypoint-worker.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["npm", "run", "start", "-w", "@demo-studio/worker"]
