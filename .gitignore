@@ -1,0 +1,34 @@
+# Secrets and local env
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+credentials.json
+**/secrets*
+
+# Dependencies and build output
+node_modules/
+dist/
+**/node_modules/
+**/.vite/
+apps/studio/dist
+apps/sample-app/dist
+
+# Local runtime
+.DS_Store
+tmp/
+.tmp/
+jobs-local/
+.minio/
+.temporal/
+*.webm
+*.mp4
+
+# Nested clones (keep docs, drop their git metadata)
+docs/kane-cli/.git/
+
+# Logs (keep committed Kane run samples)
+*.log
+!docs/kane-runs/*.log
