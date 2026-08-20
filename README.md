@@ -1,8 +1,10 @@
 # demo.studio
 
-**demo.studio** turns a live website plus a short brief into a narrated product-demo video. [Kane CLI](https://www.testmuai.com/support/docs/kane-cli-introduction/) is the browser: it opens the real page, clicks and types in one shared Chrome session, and streams what it did. Temporal, Postgres, and ffmpeg turn that session into an MP4 with voiceover.
+The feature is done — then you still have to click through it on camera so everyone else can see it. At a hackathon, judges want a demo, so the last hour goes to recording instead of shipping. Thousands of builders face the same gap between *built* and *shown*.
 
-This repository is a working app. Clone it, follow [Quick start](#quick-start), open Studio, and generate a walkthrough of a site you have the right to record.
+That’s why we built **[demo.studio](https://studio-production-d6af.up.railway.app/)**: give a URL, a goal, who’s watching, and the on-screen actions — get a narrated **demo.mp4** of the live product. [Kane CLI](https://www.testmuai.com/support/docs/kane-cli-introduction/) is the hands on the page (and the agent that tests Studio end to end). Don’t record the walkthrough. Let Kane walk it.
+
+Live app: [studio-production-d6af.up.railway.app](https://studio-production-d6af.up.railway.app/) · Pitch: [/pitch](https://studio-production-d6af.up.railway.app/pitch). Clone this repo and follow [Quick start](#quick-start) to run the same stack locally.
 
 ## Table of contents
 
@@ -78,11 +80,9 @@ How demo.studio matches Lane 3:
 
 | | |
 | --- | --- |
-| **Demo video** | Coming soon |
-| **Pitch deck** | http://localhost:5173/pitch (after Quick start) |
-| **Local Studio** | http://localhost:5173 (after Quick start) |
-| **Local API health** | http://localhost:4031/health |
-| **Temporal UI** | http://localhost:8233 |
+| **Live Studio** | https://studio-production-d6af.up.railway.app/ |
+| **Pitch deck** | https://studio-production-d6af.up.railway.app/pitch |
+| **API health** | https://api-production-27b6.up.railway.app/health |
 
 ## Built with
 
@@ -495,17 +495,26 @@ Those files are what Kane did in the browser, separate from TTS and ffmpeg.
 
 ## Optional Docker and Railway
 
-[`infra/docker-compose.yml`](infra/docker-compose.yml) can run Postgres + Temporal if you do not already have them locally. Docker is not required.
+**Deployed on Railway**
+
+| | |
+| --- | --- |
+| Studio | https://studio-production-d6af.up.railway.app/ |
+| Pitch | https://studio-production-d6af.up.railway.app/pitch |
+| API | https://api-production-27b6.up.railway.app/health |
+
+[`infra/docker-compose.yml`](infra/docker-compose.yml) can run Postgres + Temporal if you do not already have them locally. Docker is not required for local Node + Temporal CLI.
 
 Railway-style split (Dockerfiles at repo root):
 
 | Service | Dockerfile | Notes |
 | --- | --- | --- |
-| `api` | `Dockerfile.api` | Port 4031, migrations on boot |
-| `worker` | `Dockerfile.worker` | Playwright, ffmpeg, `kane-cli`; 2 GB+ RAM |
-| `studio` | `Dockerfile.studio` | Nginx; `API_UPSTREAM` e.g. `http://api.railway.internal:4031` |
+| `api` | `Dockerfile.api` | Migrations on boot; public URL above |
+| `worker` | `Dockerfile.worker` | Playwright, ffmpeg, `kane-cli`, LMNT TTS; 2 GB+ RAM |
+| `studio` | `Dockerfile.studio` | Nginx; `API_UPSTREAM` → private API host |
+| `temporal` | `Dockerfile.temporal` | `temporalio/auto-setup` on the Railway Postgres |
 
-Share `DATABASE_URL`, Temporal, Supabase, LMNT, Kane login, Gemini, `KANE_HEADLESS=1`, `KANE_CLI_SYSTEM_NODE=1` on api and worker. Do not use macOS screen capture on Linux workers; the CDP JPEG camera is the film.
+Share `DATABASE_URL`, Temporal, Supabase, LMNT (`LMNT_VOICE` e.g. `violet`), Kane login, Gemini, `KANE_HEADLESS=1`, `KANE_CLI_SYSTEM_NODE=1` on api and worker. Do not use macOS screen capture on Linux workers; the CDP JPEG camera is the film.
 
 ## Repository layout
 
