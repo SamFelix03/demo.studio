@@ -1,0 +1,17 @@
+{
+  "name": "@demo-studio/api",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@demo-studio/shared": "*",
+    "@demo-studio/workflows": "*",
+    "@fastify/cors": "^10.0.2",
+    "@temporalio/client": "^1.11.7",
+    "fastify": "^5.2.1",
+    "tsx": "^4.19.2"
+  }
+}
