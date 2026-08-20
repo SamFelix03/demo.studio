@@ -1,8 +1,9 @@
 import { NavLink, Route, Routes } from "react-router-dom";
-import { Clapperboard, Sparkles } from "lucide-react";
+import { Clapperboard, Presentation, Sparkles } from "lucide-react";
 import Home from "./pages/Home";
 import Job from "./pages/Job";
 import Gallery from "./pages/Gallery";
+import Pitch from "./pages/Pitch";
 
 function Header() {
   return (
@@ -20,6 +21,10 @@ function Header() {
             <Sparkles className="h-4" />
             Generate
           </NavLink>
+          <NavLink to="/pitch" className={({ isActive }) => `btn-nav ${isActive ? "on" : ""}`}>
+            <Presentation className="h-4" />
+            Pitch
+          </NavLink>
         </nav>
         <span className="header-spacer" aria-hidden />
       </div>
@@ -34,6 +39,7 @@ export default function App() {
       <main className="workspace">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/pitch" element={<Pitch />} />
           <Route path="/jobs" element={<Gallery />} />
           <Route path="/jobs/:id" element={<Job />} />
         </Routes>

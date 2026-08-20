@@ -1130,6 +1130,470 @@ textarea {
   }
 }
 
+.page-pitch {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: clamp(0.5rem, 3vh, 1.5rem);
+}
+
+.deck-kicker {
+  text-align: center;
+  margin-bottom: 0.35rem;
+}
+
+.deck-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: deck-in 0.28s ease;
+}
+
+@keyframes deck-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.deck-slide {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.85rem;
+}
+
+.deck-gif {
+  width: min(280px, 72vw);
+  height: auto;
+  max-height: 220px;
+  object-fit: cover;
+  border: 2px solid var(--foreground);
+  box-shadow: 3px 3px 0 var(--foreground);
+  border-radius: 6px 14px 8px 12px;
+  transform: rotate(-1deg);
+  margin-top: auto;
+}
+
+.deck-gif-wide {
+  width: min(360px, 80vw);
+  max-height: 180px;
+  transform: rotate(0.6deg);
+}
+
+.deck-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.deck-half {
+  text-align: left;
+  padding: 1.1rem 1.15rem;
+  border: 2px solid var(--foreground);
+  background: var(--card);
+  box-shadow: 3px 3px 0 var(--foreground);
+  border-radius: 8px 16px 10px 12px;
+}
+
+.deck-half h2 {
+  margin: 0.15rem 0 0.45rem;
+  font-size: 1.15rem;
+}
+
+.deck-half p:last-child {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.deck-cta {
+  margin: 0;
+  max-width: 22ch;
+  font-family: var(--font-pixel);
+  font-size: clamp(0.95rem, 2.8vw, 1.35rem);
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+}
+
+.deck-mark {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.6rem 2.2rem;
+}
+
+.deck-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.deck-star {
+  position: absolute;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  animation: star-pop 0.45s ease forwards;
+}
+
+.deck-star.n0 {
+  top: 4%;
+  left: 8%;
+  animation-delay: 0.05s;
+}
+.deck-star.n1 {
+  top: 0;
+  left: 42%;
+  animation-delay: 0.12s;
+}
+.deck-star.n2 {
+  top: 6%;
+  right: 10%;
+  animation-delay: 0.18s;
+}
+.deck-star.n3 {
+  top: 46%;
+  left: 0;
+  animation-delay: 0.24s;
+}
+.deck-star.n4 {
+  top: 48%;
+  right: 0;
+  animation-delay: 0.3s;
+}
+.deck-star.n5 {
+  bottom: 8%;
+  left: 12%;
+  animation-delay: 0.36s;
+}
+.deck-star.n6 {
+  bottom: 0;
+  left: 48%;
+  animation-delay: 0.42s;
+}
+.deck-star.n7 {
+  bottom: 10%;
+  right: 8%;
+  animation-delay: 0.48s;
+}
+
+@keyframes star-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2) rotate(-20deg);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.25) rotate(8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.deck-title {
+  margin: 0;
+  font-size: clamp(1.45rem, 3.2vw, 2.1rem);
+  letter-spacing: -0.03em;
+}
+
+.deck-lead {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.deck-quiet {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--muted-foreground);
+  font-size: 1.02rem;
+  line-height: 1.55;
+}
+
+.deck-caption {
+  margin: 0.4rem 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+}
+
+.deck-giveget {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem 1.4rem;
+  margin-top: 0.6rem;
+}
+
+.deck-pills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.deck-pills li,
+.deck-box {
+  border: 2px solid var(--foreground);
+  background: var(--card);
+  box-shadow: 3px 3px 0 var(--foreground);
+}
+
+.deck-pills li {
+  padding: 0.55rem 1.15rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.deck-box {
+  min-width: 7.6rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 6px 14px 8px 12px;
+  text-align: left;
+}
+
+.deck-box strong {
+  display: block;
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  line-height: 1.35;
+}
+
+.deck-box span {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.tilt-left {
+  transform: rotate(-1.1deg);
+}
+.tilt-right {
+  transform: rotate(1deg);
+}
+.tilt-none {
+  transform: none;
+}
+
+.deck-out {
+  min-width: 10.5rem;
+  padding: 1.15rem 1.25rem;
+}
+
+.deck-arrow {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--foreground);
+}
+
+.deck-arrow.fat {
+  font-size: 16px;
+}
+
+.wf {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 0.35rem 0;
+  width: 100%;
+}
+
+.wf li {
+  display: flex;
+  align-items: center;
+  flex: 0 1 9.6rem;
+  max-width: 10.4rem;
+  position: relative;
+  padding: 0;
+}
+
+.wf-join {
+  flex: 0 0 auto;
+  margin: 0 0.15rem 0 0.25rem;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--foreground);
+}
+
+.wf-num {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+}
+
+.wf-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.28rem;
+  min-height: 7.4rem;
+  padding: 0.55rem 0.55rem 0.6rem;
+  border: 2px solid var(--foreground);
+  background: var(--card);
+  box-shadow: 2px 2px 0 var(--foreground);
+  border-radius: 6px 12px 7px 10px;
+  text-align: left;
+}
+
+.wf-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.wf-card.kane {
+  background: var(--surface);
+}
+
+.wf-card.out {
+  background: var(--foreground);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+.wf-card.out p {
+  color: #cfcfcf;
+}
+
+.wf-card strong {
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.wf-card p {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.wf-logo {
+  width: 16px;
+  height: 16px;
+}
+
+.deck-kane {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.75rem;
+  width: 100%;
+  text-align: left;
+}
+
+.deck-kane li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border: 2px solid var(--foreground);
+  box-shadow: 2px 2px 0 var(--foreground);
+  border-radius: 6px 12px 8px 10px;
+  background: var(--surface);
+}
+
+.deck-kane img {
+  width: 18px;
+  height: 18px;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+}
+
+.deck-kane strong {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.deck-kane p {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.deck-kane code {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--foreground);
+}
+
+.deck-quote {
+  margin: 0.4rem 0 0.9rem;
+  max-width: 18ch;
+  font-family: var(--font-pixel);
+  font-size: clamp(0.72rem, 2vw, 0.95rem);
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+}
+
+.deck-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+}
+
+.deck-dots {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deck-dots button {
+  width: 0.55rem;
+  height: 0.55rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--foreground);
+  background: transparent;
+  cursor: pointer;
+}
+
+.deck-dots button.on {
+  background: var(--foreground);
+}
+
 @media (max-width: 900px) {
   .app-header-inner {
     grid-template-columns: 1fr;
@@ -1142,6 +1606,15 @@ textarea {
   .job-layout.compare,
   .row {
     grid-template-columns: 1fr;
+  }
+  .deck-kane {
+    grid-template-columns: 1fr;
+  }
+  .deck-split {
+    grid-template-columns: 1fr;
+  }
+  .center-nav {
+    flex-wrap: wrap;
   }
 }
 

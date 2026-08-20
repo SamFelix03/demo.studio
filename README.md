@@ -79,7 +79,7 @@ How demo.studio matches Lane 3:
 | | |
 | --- | --- |
 | **Demo video** | Coming soon |
-| **Pitch deck** | Coming soon |
+| **Pitch deck** | http://localhost:5173/pitch (after Quick start) |
 | **Local Studio** | http://localhost:5173 (after Quick start) |
 | **Local API health** | http://localhost:4031/health |
 | **Temporal UI** | http://localhost:8233 |
