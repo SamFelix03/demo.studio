@@ -1,0 +1,21 @@
+{
+  "name": "demo-studio",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:infra": "echo 'Use local Postgres + temporal server start-dev (see README)'",
+    "migrate": "npm run migrate -w @demo-studio/shared",
+    "dev:api": "npm run dev -w @demo-studio/api",
+    "dev:worker": "npm run dev -w @demo-studio/worker",
+    "dev:studio": "npm run dev -w @demo-studio/studio",
+    "dev:sample": "npm run dev -w @demo-studio/sample-app",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
