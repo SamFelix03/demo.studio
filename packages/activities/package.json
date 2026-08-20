@@ -1,0 +1,14 @@
+{
+  "name": "@demo-studio/activities",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@demo-studio/shared": "*",
+    "@temporalio/activity": "^1.11.7",
+    "playwright": "^1.50.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}
