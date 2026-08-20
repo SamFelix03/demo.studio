@@ -1,0 +1,16 @@
+{
+  "name": "@demo-studio/worker",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@demo-studio/activities": "*",
+    "@demo-studio/shared": "*",
+    "@demo-studio/workflows": "*",
+    "@temporalio/worker": "^1.11.7",
+    "tsx": "^4.19.2"
+  }
+}
