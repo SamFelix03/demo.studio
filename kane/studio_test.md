@@ -1,21 +1,29 @@
 ---
-mode: action
+mode: testing
 url: http://localhost:5173
-max_steps: 20
-tags: [studio]
+max_steps: 18
+timeout: 90
+tags: [studio, smoke]
 ---
 
-# Demo Studio primary flow
+# Studio smoke: landing, brief actions, gallery
 
 ## Open studio
-Open http://localhost:5173.
-Verify the page contains "Demo Studio".
-Verify a Kane tab and a Normal tab are visible.
+@import ./helpers/open_generate.md
 
-## Fill the form
-Fill the Website URL field with "http://localhost:4173" if empty.
-Verify the Demo script textarea is visible.
+## Landing copy
+Verify the page contains "demo.studio".
+Verify Kane CLI is mentioned.
+Verify the Website URL field contains "surveys.free".
+Verify the Product name field contains "surveys.free".
 
-## History link
-Click the History link in the header.
+## Brief lists the default walkthrough
+Click the button labeled Continue.
+Verify the page contains "On-screen actions".
+Verify the page contains "Create it free".
+Verify the page contains "What Kane should demonstrate".
+
+## Gallery
+Click Demo Gallery.
 Verify the URL contains "/jobs".
+Verify the page contains "Demo Gallery".

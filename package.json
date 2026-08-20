@@ -12,6 +12,7 @@
     "dev:api": "npm run dev -w @demo-studio/api",
     "dev:worker": "npm run dev -w @demo-studio/worker",
     "dev:studio": "npm run dev -w @demo-studio/studio",
+    "test:kane": "bash kane/run-suite.sh",
     "build": "npm run build --workspaces --if-present"
   },
   "engines": {

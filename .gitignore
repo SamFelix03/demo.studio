@@ -29,6 +29,12 @@ jobs-local/
 # Nested clones (keep docs, drop their git metadata)
 docs/kane-cli/.git/
 
+# Kane CLI local recordings and evidence (summaries live in docs/kane-runs)
+output-*/
+**/output-*/
+.testmuai/
+
 # Logs (keep committed Kane run samples)
 *.log
 !docs/kane-runs/*.log
+!docs/kane-runs/**/*.log
