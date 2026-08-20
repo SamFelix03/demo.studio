@@ -12,7 +12,6 @@
     "dev:api": "npm run dev -w @demo-studio/api",
     "dev:worker": "npm run dev -w @demo-studio/worker",
     "dev:studio": "npm run dev -w @demo-studio/studio",
-    "dev:sample": "npm run dev -w @demo-studio/sample-app",
     "build": "npm run build --workspaces --if-present"
   },
   "engines": {
