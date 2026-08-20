@@ -13,7 +13,7 @@ export function loadConfig() {
       serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
       bucket: process.env.SUPABASE_STORAGE_BUCKET ?? "demo-studio",
     },
-    apiPort: Number(process.env.API_PORT ?? 4031),
+    apiPort: Number(process.env.PORT ?? process.env.API_PORT ?? 4031),
     publicApiBase: process.env.PUBLIC_API_BASE_URL ?? "http://localhost:4031",
     lmntApiKey: process.env.LMNT_API_KEY || undefined,
     lmntVoice: process.env.LMNT_VOICE ?? "lily",

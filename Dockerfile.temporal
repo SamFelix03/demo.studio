@@ -1,0 +1,5 @@
+# Temporal frontend + matching Postgres schema (auto-setup).
+FROM temporalio/auto-setup:1.27.2
+ENV BIND_ON_IP=0.0.0.0
+ENV PORT=7233
+EXPOSE 7233

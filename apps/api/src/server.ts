@@ -28,8 +28,18 @@ const cfg = loadConfig();
 const db = getPool(cfg.databaseUrl);
 
 async function temporal() {
-  const connection = await Connection.connect({ address: cfg.temporalAddress });
-  return new Client({ connection, namespace: cfg.temporalNamespace });
+  let last: unknown;
+  for (let i = 0; i < 40; i++) {
+    try {
+      const connection = await Connection.connect({ address: cfg.temporalAddress });
+      return new Client({ connection, namespace: cfg.temporalNamespace });
+    } catch (err) {
+      last = err;
+      console.error(`temporal ${cfg.temporalAddress} not ready (${i + 1}/40)`);
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+  }
+  throw last;
 }
 
 async function refreshArtifacts(job: NonNullable<Awaited<ReturnType<typeof getJob>>>) {

@@ -3,9 +3,17 @@ import type { Artifact, JobEvent, JobInput, JobMode, JobRecord, JobStatus } from
 
 let pool: pg.Pool | undefined;
 
+export function pgSsl(connectionString: string): boolean | { rejectUnauthorized: boolean } | undefined {
+  if (/sslmode=(disable|allow)/i.test(connectionString)) return undefined;
+  if (/sslmode=(require|verify-ca|verify-full|prefer)/i.test(connectionString)) {
+    return { rejectUnauthorized: false };
+  }
+  return undefined;
+}
+
 export function getPool(connectionString: string): pg.Pool {
   if (!pool) {
-    pool = new pg.Pool({ connectionString, max: 10 });
+    pool = new pg.Pool({ connectionString, ssl: pgSsl(connectionString), max: 10 });
   }
   return pool;
 }
