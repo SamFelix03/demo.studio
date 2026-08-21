@@ -58,6 +58,8 @@ Kane is not a sidecar check after a human recorded a video. Kane **is** the hand
 
 ## Who it is for
 
+- **Engineers and PMs at work** — the feature is done, but you still have to click through it on camera so everyone else can see it. demo.studio turns that walkthrough into a film from a brief instead of another Loom session.
+- **Hackathon builders** — judges want a demo; the last hour should go to shipping, not recording. Generate a narrated tour of the live product and keep building.
 - **Founders and PMs** who need a current walkthrough of a SaaS surface without sitting in Loom.
 - **Sales engineers and marketers** who want a repeatable “click through this funnel” film from a brief, not from a designer timeline.
 - **Teams already using Kane** who want Kane’s browser work to produce a customer-facing artifact, not only a pass/fail in CI.
@@ -84,6 +86,8 @@ How demo.studio matches Lane 3:
 | **Live Studio** | https://studio-production-d6af.up.railway.app/ |
 | **Pitch deck** | https://studio-production-d6af.up.railway.app/pitch |
 | **API health** | https://api-production-27b6.up.railway.app/health |
+| **Kane Studio test results** | [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md) |
+| **Example product run** (surveys.free) | [`docs/kane-runs/surveys-free-job.json`](docs/kane-runs/surveys-free-job.json) · [log](docs/kane-runs/surveys-free-form-builder.log) · [NDJSON](docs/kane-runs/surveys-free-form-builder.jsonl) |
 
 ## Built with
 
@@ -179,6 +183,23 @@ An earlier run found Continue submitting Generate; that is fixed and this run st
 The surveys.free **product** walkthrough (Kane as hands on the live form builder) is unchanged: [`docs/kane-runs/surveys-free-form-builder.log`](docs/kane-runs/surveys-free-form-builder.log).
 
 ## How it works
+
+You fill in a short wizard (site, brief, optional login, launch). Studio posts a job to the API; Temporal runs **KaneDemoWorkflow**. Kane CLI logs in and checks credits, opens the real URL to make sure the page is reachable (no CAPTCHA / paywall / login wall that would block the demo), then explores the live UI and remembers what buttons and fields are there. The brief becomes a list of beats (from your numbered steps, or Gemini if needed). Each beat gets a spoken voiceover (LMNT). Kane then walks those steps in **one** Chrome window while a camera (Playwright over CDP) takes JPEG stills of the painted page—not a separate clicker. ffmpeg cuts those stills to match each voiceover, stitches the clips, uploads `demo.mp4` plus captions and logs to storage, and the Gallery shows the finished film.
+
+In plain English, end to end:
+
+1. **You describe the demo** — URL, product name, goal, audience, and the clicks/types you want on screen (e.g. Birthday RSVP on surveys.free).
+2. **Studio packages the brief** — four steps: Site → Brief → Access → Launch; actions become numbered `Step N:` lines and a job is created.
+3. **The API starts the workflow** — job lands in Postgres; Temporal `KaneDemoWorkflow` begins.
+4. **Kane is ready** — `whoami` / login / balance / window size; a free Chrome debugging slot is leased so jobs do not collide.
+5. **Preflight** — Kane opens the start URL and aborts early if the site is blocked (CAPTCHA, Cloudflare, paywall, hard login wall, MFA).
+6. **Understand** — a second Kane run maps live nav, inputs, and CTAs into `context.md` / variables for later steps.
+7. **Plan beats** — use beats you already supplied, or parse `Step N:`, or ask Gemini; success checks are tightened so the homepage text cannot fake a later click.
+8. **Optional confirm** — if required, you approve the planned script before filming continues.
+9. **Voiceover** — each beat’s narration becomes a WAV (LMNT in cloud; `say` / edge-tts / espeak as fallbacks).
+10. **Author on camera** — TestMD is compiled; Kane runs `testmd run --agent` in the same Chrome while JPEG stills of the real tab are recorded.
+11. **Assemble and ship** — stills + WAVs → beat clips → one MP4, captions, timeline, Kane log/NDJSON → Supabase; job marked completed in the Gallery.
+12. **If Kane cannot finish** — result codes and abort reasons surface in the job UI; Chrome slots are always released.
 
 ### What the operator does
 
