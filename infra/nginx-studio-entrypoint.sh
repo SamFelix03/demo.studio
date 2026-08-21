@@ -6,6 +6,10 @@ cat > /etc/nginx/conf.d/default.conf <<EOF
 server {
   listen ${PORT};
   root /usr/share/nginx/html;
+  # SPA routes (no on-disk dir) must hit index.html, not a static folder clash.
+  location = /pitch {
+    try_files /index.html =404;
+  }
   location / {
     try_files \$uri \$uri/ /index.html;
   }

@@ -98,7 +98,7 @@ export default function Pitch() {
           <section className="deck-slide">
             <p className="pixel-hero deck-word">Hi, I’m Sam</p>
             <p className="deck-lead">SDE at a startup. Hackathons on the side.</p>
-            <img className="deck-gif" src="/pitch/sam.gif" alt="" />
+            <img className="deck-gif" src="/pitch-media/sam.gif" alt="" />
           </section>
         )}
 
@@ -116,7 +116,7 @@ export default function Pitch() {
                 <p>So I spend the last hour recording, not shipping.</p>
               </article>
             </div>
-            <img className="deck-gif deck-gif-wide" src="/pitch/work.gif" alt="" />
+            <img className="deck-gif deck-gif-wide" src="/pitch-media/work.gif" alt="" />
           </section>
         )}
 
