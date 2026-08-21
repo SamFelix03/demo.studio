@@ -4,7 +4,7 @@ The feature is done — then you still have to click through it on camera so eve
 
 That’s why we built **[demo.studio](https://studio-production-d6af.up.railway.app/)**: give a URL, a goal, who’s watching, and the on-screen actions — get a narrated **demo.mp4** of the live product. [Kane CLI](https://www.testmuai.com/support/docs/kane-cli-introduction/) is the hands on the page (and the agent that tests Studio end to end). Don’t record the walkthrough. Let Kane walk it.
 
-Live app: [studio-production-d6af.up.railway.app](https://studio-production-d6af.up.railway.app/) · Pitch: [/pitch](https://studio-production-d6af.up.railway.app/pitch). Clone this repo and follow [Quick start](#quick-start) to run the same stack locally.
+Live app: [studio-production-d6af.up.railway.app](https://studio-production-d6af.up.railway.app/) · Pitch: [/pitch](https://studio-production-d6af.up.railway.app/pitch). Clone this repo and follow [Quick start](#quick-start) to run the same stack locally. Watch the demo on [YouTube](https://www.youtube.com/watch?v=NlvFnU8O-b8)
 
 ## Table of contents
 
@@ -80,6 +80,7 @@ How demo.studio matches Lane 3:
 
 | | |
 | --- | --- |
+| **Demo video** | https://www.youtube.com/watch?v=NlvFnU8O-b8 |
 | **Live Studio** | https://studio-production-d6af.up.railway.app/ |
 | **Pitch deck** | https://studio-production-d6af.up.railway.app/pitch |
 | **API health** | https://api-production-27b6.up.railway.app/health |
