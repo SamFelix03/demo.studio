@@ -64,7 +64,7 @@ async function probeDuration(path: string): Promise<number> {
 
 const SCALE = `scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=decrease,pad=${WIDTH}:${HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${FPS},format=yuv420p`;
 
-type LiveRec = { t: number; file: string };
+type LiveRec = { t: number; file: string; url?: string };
 
 function readLiveIndex(dir: string): LiveRec[] {
   const p = join(dir, "stills", "live", "index.jsonl");
@@ -85,19 +85,26 @@ function readLiveIndex(dir: string): LiveRec[] {
 
 async function pictureFromTimedJpegs(files: string[], stepSec: number[], seconds: number, outMp4: string) {
   if (!files.length) return false;
+  const picked: { file: string; dur: number }[] = [];
+  let acc = 0;
+  for (let i = files.length - 1; i >= 0 && acc < seconds; i--) {
+    const raw = i === files.length - 1 ? Math.max(1.5, stepSec[i] ?? 0.25) : Math.max(0.04, stepSec[i] ?? 0.25);
+    const dur = Math.min(raw, seconds - acc);
+    picked.unshift({ file: files[i], dur });
+    acc += dur;
+  }
   const d = seconds.toFixed(3);
   const list = outMp4.replace(/\.mp4$/, ".txt");
   const lines: string[] = [];
-  let acc = 0;
-  for (let i = 0; i < files.length; i++) {
-    const escaped = files[i].replace(/'/g, `'\\''`);
-    const remain = Math.max(0.04, seconds - acc);
-    const dur = i === files.length - 1 ? remain : Math.min(remain, Math.max(0.04, stepSec[i] ?? 0.25));
+  let used = 0;
+  for (let i = 0; i < picked.length; i++) {
+    const escaped = picked[i].file.replace(/'/g, `'\\''`);
+    const dur = i === picked.length - 1 ? Math.max(0.04, seconds - used) : picked[i].dur;
     lines.push(`file '${escaped}'`);
     lines.push(`duration ${dur.toFixed(3)}`);
-    acc += dur;
+    used += dur;
   }
-  const last = files[files.length - 1].replace(/'/g, `'\\''`);
+  const last = picked[picked.length - 1].file.replace(/'/g, `'\\''`);
   lines.push(`file '${last}'`);
   writeFileSync(list, `${lines.join("\n")}\n`);
   await ff("ffmpeg", [
@@ -128,23 +135,27 @@ function liveFilesForWindow(
   live: LiveRec[],
   t0: number,
   win: { startMs: number; endMs: number } | undefined,
+  audioDur: number,
   carry?: string,
-): { files: string[]; steps: number[] } {
+): { files: string[]; steps: number[]; lastUrl?: string } {
   if (!live.length) return { files: carry ? [carry] : [], steps: [] };
   const a = t0 + (win?.startMs ?? 0);
   const b = t0 + (win?.endMs ?? live[live.length - 1].t - t0 + 1);
-  let inWin = live.filter((f) => f.t >= a && f.t < b);
+  let inWin = live.filter((f) => f.t >= a && f.t <= b);
   if (!inWin.length) {
     const before = live.filter((f) => f.t <= b);
     if (before.length) inWin = [before[before.length - 1]];
-    else if (carry) return { files: [carry], steps: [0.25] };
+    else if (carry) return { files: [carry], steps: [Math.max(1.5, audioDur)] };
     else inWin = [live[0]];
   }
-  const files = inWin.map((f) => f.file);
-  const steps = inWin.map((f, i) =>
-    i + 1 < inWin.length ? Math.max(0.04, (inWin[i + 1].t - f.t) / 1000) : 0.25,
+  const tailStart = b - Math.max(audioDur, 1.5) * 1000;
+  const tail = inWin.filter((f) => f.t >= tailStart);
+  const use = tail.length ? tail : inWin.slice(-8);
+  const files = use.map((f) => f.file);
+  const steps = use.map((f, i) =>
+    i + 1 < use.length ? Math.max(0.04, (use[i + 1].t - f.t) / 1000) : Math.max(1.5, audioDur),
   );
-  return { files, steps };
+  return { files, steps, lastUrl: use[use.length - 1]?.url };
 }
 
 async function sliceScreen(src: string, startSec: number, seconds: number, outMp4: string) {
@@ -499,7 +510,7 @@ export async function assembleDemo(args: {
       let made = false;
       const win = windows.find((w) => w.beatIndex === i) ?? windows[i];
       if (live.length) {
-        const picked = liveFilesForWindow(live, captureT0, win, carry);
+        const picked = liveFilesForWindow(live, captureT0, win, audioDur, carry);
         carry = picked.files[picked.files.length - 1];
         try {
           made = await pictureFromTimedJpegs(picked.files, picked.steps, audioDur, silent);

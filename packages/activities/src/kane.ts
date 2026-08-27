@@ -360,61 +360,68 @@ function eventHasTool(ev: Record<string, unknown>, tool: "click" | "type"): bool
   return /\bclick\b/.test(blob);
 }
 
+type BeatWindow = { beatIndex: number; startMs: number; endMs: number; passed?: boolean };
+
+function evKind(ev: Record<string, unknown>): string {
+  const type = String(ev.type ?? ev.event ?? "").toLowerCase();
+  if (type) return type;
+  return (describeKaneEvent(ev)?.tool ?? "").toLowerCase();
+}
+
 function assignBeatWindows(
   beats: Beat[],
   stamped: Array<{ t: number; ev: Record<string, unknown> }>,
   t0: number,
   tEnd: number,
-): Array<{ beatIndex: number; startMs: number; endMs: number }> {
-  const ends = stamped.filter(({ ev }) => {
-    const type = String(ev.type ?? "").toLowerCase();
-    const view = describeKaneEvent(ev);
-    return type === "run_end" || view?.tool === "run_end";
-  });
+): BeatWindow[] {
   const span = Math.max(1, tEnd - t0);
-  if (ends.length >= beats.length) {
-    const use = ends.slice(-beats.length);
-    let prev = 0;
-    return beats.map((_, i) => {
-      const endMs = Math.max(prev + 800, use[i].t - t0);
-      const startMs = prev;
-      prev = endMs;
-      return { beatIndex: i, startMs, endMs: i === beats.length - 1 ? span : endMs };
-    });
-  }
-  const starts = beats.map(() => -1);
+  const intervals: { start: number; end: number; passed: boolean }[] = [];
+  let open: number | null = null;
   for (const { t, ev } of stamped) {
-    const view = describeKaneEvent(ev);
-    const blob = `${view?.text ?? ""} ${JSON.stringify(ev)}`.toLowerCase();
-    for (let i = 0; i < beats.length; i++) {
-      if (starts[i] >= 0) continue;
-      const title = beats[i].title.toLowerCase().replace(/[^\w]+/g, " ").trim();
-      const needle = title.slice(0, Math.min(28, title.length));
-      if (needle.length >= 5 && blob.includes(needle)) {
-        starts[i] = t;
-        break;
-      }
+    const kind = evKind(ev);
+    if (kind === "test_md_step_start") {
+      if (open != null) intervals.push({ start: open, end: t, passed: true });
+      open = t;
+    } else if (kind === "test_md_step_end" && open != null) {
+      const status = String(ev.status ?? describeKaneEvent(ev)?.status ?? "").toLowerCase();
+      intervals.push({ start: open, end: Math.max(open + 800, t), passed: status !== "failed" });
+      open = null;
     }
   }
-  let next = 0;
-  for (const { t, ev } of stamped) {
-    while (next < beats.length && starts[next] >= 0) next++;
-    if (next >= beats.length) break;
-    const need = requiredTools(beats[next].action)[0];
-    if (!need) continue;
-    if (eventHasTool(ev, need)) starts[next] = t;
+  if (open != null) intervals.push({ start: open, end: tEnd, passed: true });
+
+  const use = intervals.length > beats.length ? intervals.slice(-beats.length) : intervals;
+  if (use.length >= beats.length) {
+    return beats.map((_, i) => ({
+      beatIndex: i,
+      startMs: Math.max(0, use[i].start - t0),
+      endMs: i === beats.length - 1 ? span : Math.max(use[i].start - t0 + 800, use[i].end - t0),
+      passed: use[i].passed,
+    }));
   }
-  let last = 0;
-  for (let i = 0; i < starts.length; i++) {
-    if (starts[i] < 0) starts[i] = last;
-    last = starts[i];
-  }
-  return beats.map((_, i) => {
-    const startMs = Math.max(0, starts[i] - t0);
-    const nextStart = i + 1 < starts.length ? Math.max(0, starts[i + 1] - t0) : span;
-    const endMs = Math.max(startMs + 400, nextStart);
-    return { beatIndex: i, startMs, endMs };
+
+  const ends = stamped.filter(({ ev }) => {
+    const kind = evKind(ev);
+    return kind === "run_end";
   });
+  if (ends.length >= beats.length) {
+    const chosen = ends.slice(-beats.length);
+    let prev = 0;
+    return beats.map((_, i) => {
+      const endMs = i === beats.length - 1 ? span : Math.max(prev + 800, chosen[i].t - t0);
+      const startMs = prev;
+      prev = endMs;
+      const status = String(chosen[i].ev.status ?? "").toLowerCase();
+      return { beatIndex: i, startMs, endMs, passed: status !== "failed" };
+    });
+  }
+
+  return beats.map((_, i) => ({
+    beatIndex: i,
+    startMs: Math.floor((i / Math.max(1, beats.length)) * span),
+    endMs: Math.floor(((i + 1) / Math.max(1, beats.length)) * span) || span,
+    passed: true,
+  }));
 }
 
 function liveFrames(dir: string): string[] {
@@ -425,7 +432,7 @@ function liveFrames(dir: string): string[] {
     .sort();
 }
 
-type LiveRec = { t: number; file: string };
+type LiveRec = { t: number; file: string; url?: string };
 
 function readLiveIndex(framesDir: string): LiveRec[] {
   const p = join(framesDir, "index.jsonl");
@@ -480,7 +487,7 @@ export async function compileTestMd(args: {
   );
   const beats = tightenBeatGates(args.beats);
   const beatsMd = beats
-    .map((b) => {
+    .map((b, i) => {
       const checks: string[] = [];
       if (b.success.urlContains) checks.push(`Verify the URL contains "${b.success.urlContains}".`);
       if (b.success.titleContains) checks.push(`Verify the page title contains "${b.success.titleContains}".`);
@@ -507,6 +514,7 @@ Click once. Do not type. Stay in this browser tab.`;
 
 ${body}
 ${checks.join("\n")}
+Then pause for ${Math.max(2, Math.ceil(args.audioSeconds?.[i] ?? 3))} seconds so the camera can hold this screen.
 `;
     })
     .join("\n");
@@ -514,7 +522,7 @@ ${checks.join("\n")}
   const md = `---
 mode: action
 url: ${args.input.website_url}
-max_steps: 24
+max_steps: 48
 tags: [demo]
 ---
 
@@ -538,13 +546,15 @@ export async function kaneTestmdRun(args: {
   jobId: string;
   mode: "kane" | "naive";
   beats: Beat[];
+  input?: JobInput;
+  audioSeconds?: number[];
   replay?: boolean;
   timeoutSec?: number;
   cdpPort?: number;
 }) {
   const dir = workDir(args.jobId);
   const testPath = join(dir, "demo_test.md");
-  const beats = tightenBeatGates(args.beats);
+  let beats = tightenBeatGates(args.beats);
   await emitEvent(args.jobId, "kane_cmd", { phase: args.replay ? "replay" : "author", argv: ["testmd", "run"] });
   const stamped: Array<{ t: number; ev: Record<string, unknown> }> = [];
   const t0 = Date.now();
@@ -552,7 +562,7 @@ export async function kaneTestmdRun(args: {
     stamped.push({ t: Date.now(), ev });
     kaneEventHandler(args.jobId, args.replay ? "replay" : "author")(ev);
   };
-  const run = async () => {
+  const spawnOnce = () => {
     const argv = [
       "testmd",
       "run",
@@ -561,14 +571,41 @@ export async function kaneTestmdRun(args: {
       "--name",
       `demo-${args.jobId.slice(0, 8)}`,
       "--timeout",
-      String(args.timeoutSec ?? 180),
+      String(args.timeoutSec ?? 600),
       "--max-steps",
-      "20",
+      "40",
       ...extraKaneFlags(),
     ];
     if (existsSync(join(dir, "context.md"))) argv.push("--local-context", join(dir, "context.md"));
     if (existsSync(join(dir, "variables.json"))) argv.push("--variables-file", join(dir, "variables.json"));
     return spawnKane(argv, { timeoutMs: 900_000, cwd: dir, onEvent });
+  };
+  const run = async () => {
+    let result = await spawnOnce();
+    const stepEnds = stamped.filter((s) => evKind(s.ev) === "test_md_step_end");
+    const failedStep = stepEnds.some((s) => String(s.ev.status ?? "").toLowerCase() === "failed");
+    if ((result.exitCode !== 0 || failedStep) && args.input && !args.replay) {
+      const healed = await rewriteFailedBeat({
+        jobId: args.jobId,
+        beats,
+        lastResult: {
+          exitCode: result.exitCode,
+          runEnd: result.runEnd,
+          progress: result.progress as Array<{ remark?: string; status?: string }>,
+        },
+      });
+      if (healed.rewritten) {
+        beats = tightenBeatGates(healed.beats);
+        await compileTestMd({
+          jobId: args.jobId,
+          input: args.input,
+          beats,
+          audioSeconds: args.audioSeconds,
+        });
+        result = await spawnOnce();
+      }
+    }
+    return result;
   };
   let result;
   let capturePath: string | undefined;
@@ -613,6 +650,21 @@ export async function kaneTestmdRun(args: {
   });
 
   const missing: string[] = [];
+  const stepEnds = stamped.filter((s) => evKind(s.ev) === "test_md_step_start");
+  if (stepEnds.length && windows.length < beats.length) {
+    missing.push(`Kane only finished ${windows.length} of ${beats.length} demo steps`);
+  }
+  for (const w of windows) {
+    if (w.passed === false) missing.push(`Beat ${w.beatIndex + 1} failed in Kane`);
+    const beat = beats[w.beatIndex];
+    const needle = beat?.success.urlContains;
+    if (!needle) continue;
+    const inWin = index.filter((f) => f.t >= t0 + w.startMs && f.t <= t0 + w.endMs);
+    const urls = inWin.map((f) => f.url).filter((u): u is string => Boolean(u));
+    if (needle && urls.length && !urls.some((u) => u.toLowerCase().includes(needle.toLowerCase()))) {
+      missing.push(`Beat ${w.beatIndex + 1}: camera never showed a URL containing "${needle}"`);
+    }
+  }
   const sessionClick = stamped.some((s) => eventHasTool(s.ev, "click"));
   const sessionType = stamped.some((s) => eventHasTool(s.ev, "type"));
   if (beats.some((b) => requiredTools(b.action).includes("click")) && !sessionClick) {

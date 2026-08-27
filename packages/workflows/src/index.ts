@@ -168,7 +168,9 @@ export async function KaneDemoWorkflow(args: {
         jobId: args.jobId,
         mode: "kane",
         beats,
-        timeoutSec: 180,
+        input: args.input,
+        audioSeconds: tts.seconds,
+        timeoutSec: 600,
         cdpPort: slot2.port,
       });
       await media.assembleDemo({

@@ -56,19 +56,22 @@ export async function runWithRecordedChrome<T>(args: {
         ...(process.platform === "linux" ? ["--no-sandbox", "--disable-dev-shm-usage"] : []),
       ],
     });
-  } catch {
+  } catch (err) {
+    console.error("chrome camera launch failed, Kane will run without CDP stills:", err);
     const result = await args.fn();
     return { result, framesDir };
   }
 
   process.env.KANE_CDP_ENDPOINT = cdp;
   let frameI = 0;
-  let capturing = false;
-  const tick = setInterval(() => {
-    if (capturing) return;
-    const page = activePage(context!);
-    if (!page) return;
-    capturing = true;
+  let stopped = false;
+  const shoot = () => {
+    if (stopped || !context) return;
+    const page = activePage(context);
+    if (!page) {
+      setTimeout(shoot, 250);
+      return;
+    }
     const dest = join(framesDir, `live-${String(frameI++).padStart(5, "0")}.jpg`);
     const url = page.url();
     const t = Date.now();
@@ -79,20 +82,37 @@ export async function runWithRecordedChrome<T>(args: {
       })
       .catch(() => undefined)
       .finally(() => {
-        capturing = false;
+        if (!stopped) setTimeout(shoot, 250);
       });
-  }, 250);
+  };
+  shoot();
+
+  const stopCamera = async () => {
+    stopped = true;
+    const page = context ? activePage(context) : undefined;
+    if (page) {
+      const dest = join(framesDir, `live-${String(frameI++).padStart(5, "0")}.jpg`);
+      const url = page.url();
+      const t = Date.now();
+      try {
+        await page.screenshot({ path: dest, type: "jpeg", quality: 72 });
+        if (existsSync(dest)) appendFileSync(indexPath, `${JSON.stringify({ t, file: dest, url })}\n`);
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
   try {
     const result = await args.fn();
-    clearInterval(tick);
+    await stopCamera();
     await context.close();
     context = undefined;
     return { result, framesDir };
   } catch (err) {
-    clearInterval(tick);
+    await stopCamera();
     try {
-      await context.close();
+      await context?.close();
     } catch {
       /* ignore */
     }
