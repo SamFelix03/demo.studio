@@ -100,6 +100,7 @@ export default function Home() {
           input: {
             website_url,
             script,
+            walkthrough: filledActions,
             product_name,
             i_have_right_to_record: attest,
             credentials: username || password ? { username, password } : undefined,

@@ -43,6 +43,7 @@ export const jobInputSchema = z.object({
       message: "javascript: URLs are not allowed",
     }),
   script: z.string().min(1),
+  walkthrough: z.array(z.string().min(1).max(240)).max(12).optional(),
   beats: z.array(beatSchema).max(20).optional(),
   product_name: z.string().optional(),
   credentials: z

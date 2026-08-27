@@ -127,6 +127,7 @@ export async function KaneDemoWorkflow(args: {
       mode: "kane",
       input: args.input,
       site: site.final_state,
+      screenshotPath: site.screenshotPath,
     });
     let beats = planned.beats;
     if (args.input.require_script_confirm) {

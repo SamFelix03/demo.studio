@@ -31,6 +31,8 @@ export interface Beat {
 export interface JobInput {
   website_url: string;
   script: string;
+  /** User's on-screen actions in order. Plan may ground labels, not add/reorder these. */
+  walkthrough?: string[];
   beats?: Beat[];
   product_name?: string;
   credentials?: { username?: string; password?: string };

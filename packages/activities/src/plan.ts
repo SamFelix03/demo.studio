@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { writeFileSync, existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { prefix, putObject, type Beat, type JobInput } from "@demo-studio/shared";
 import { emitEvent } from "./control.js";
@@ -43,25 +43,49 @@ function beatsFromNumberedScript(input: JobInput): Beat[] | null {
   if (matches.length < 2) return null;
   return matches.slice(0, 12).map((m, i) => {
     const instruction = m[2].replace(/\s+/g, " ").trim().replace(/[.,;]+$/, "");
-    const typed = typedValueFromAction(instruction);
-    const click = requiredTools(instruction).includes("click");
-    const labeled = instruction.match(/labeled\s+["']?([^"']+)["']?/i)?.[1];
-    const target = (
-      labeled ||
-      instruction.match(/(?:click(?:\s+on)?|choose|type)\s+(.+?)(?:\s+in|\s+under|\s+next|$)/i)?.[1] ||
-      instruction.slice(0, 40)
-    )
-      .replace(/^(the\s+)?button\s+labeled\s+/i, "")
-      .trim();
-    return {
-      id: `beat-${m[1] || i + 1}`,
-      title: instruction.slice(0, 48),
-      action: instruction,
-      targetText: target.slice(0, 80),
-      success: typed ? { visibleText: typed } : { elementState: click ? "changed" : "visible" },
-      narration: instruction,
-    };
+    return skeletonFromAction(instruction, Number(m[1]) ? Number(m[1]) - 1 : i);
   });
+}
+
+function skeletonFromAction(instruction: string, i: number): Beat {
+  const typed = typedValueFromAction(instruction);
+  const click = requiredTools(instruction).includes("click");
+  const labeled = instruction.match(/labeled\s+["']?([^"']+)["']?/i)?.[1];
+  const target = (
+    labeled ||
+    instruction.match(/(?:click(?:\s+on)?|choose|type)\s+(.+?)(?:\s+in|\s+under|\s+next|$)/i)?.[1] ||
+    instruction.slice(0, 40)
+  )
+    .replace(/^(the\s+)?button\s+labeled\s+/i, "")
+    .trim();
+  return {
+    id: `beat-${i + 1}`,
+    title: instruction.slice(0, 48),
+    action: instruction,
+    targetText: target.slice(0, 80),
+    success: typed ? { visibleText: typed } : { elementState: click ? "changed" : "visible" },
+    narration: instruction,
+  };
+}
+
+function intentsFromInput(input: JobInput): string[] {
+  const walk = (input.walkthrough ?? []).map((s) => s.trim()).filter(Boolean);
+  if (walk.length) return walk.slice(0, 12);
+  const numbered = beatsFromNumberedScript(input);
+  if (numbered?.length) return numbered.map((b) => b.action);
+  return [];
+}
+
+/** Drop model steps that are not mentioned in the user's brief. */
+function entailedByBrief(instruction: string, script: string): boolean {
+  const words = instruction
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 3 && !/^(this|that|with|from|into|your|page|click|type|open)$/.test(w));
+  if (words.length < 2) return true;
+  const blob = script.toLowerCase();
+  const hit = words.filter((w) => blob.includes(w)).length;
+  return hit / words.length >= 0.34;
 }
 
 function fallbackHostVoice(beats: Beat[]): Beat[] {
@@ -85,30 +109,10 @@ function toBeats(steps: PlanStep[], product?: string): Beat[] {
   });
 }
 
-function siteLabels(value: string | undefined): string[] {
-  if (!value) return [];
-  const t = value.trim();
-  if (t.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(t) as unknown;
-      if (Array.isArray(parsed)) return parsed.map((x) => String(x).replace(/^["'\[]+|["'\]]+$/g, "").trim()).filter(Boolean);
-    } catch {
-      /* fall through */
-    }
-  }
-  return t
-    .split(/[,|]/)
-    .map((s) => s.replace(/[\[\]"]/g, "").trim())
-    .filter(Boolean);
-}
-
-function heuristicPlan(input: JobInput, site: Record<string, string>): Beat[] {
+function homepageFallback(input: JobInput, site: Record<string, string>): Beat[] {
   const product = input.product_name || "this product";
   const hero = site.hero_heading || site.page_title || product;
-  const cta = site.hero_cta || "Learn more";
-  const nav = siteLabels(site.nav_items || "Features, Pricing").slice(0, 6);
-  const wants = input.script.toLowerCase();
-  const beats: Beat[] = [
+  return [
     {
       id: "beat-1",
       title: "Homepage",
@@ -118,95 +122,38 @@ function heuristicPlan(input: JobInput, site: Record<string, string>): Beat[] {
       narration: `${product} opens on a clear homepage. ${hero}.`,
     },
   ];
-  const featureNav = nav.find((n) => /feature/i.test(n));
-  if (featureNav && /feature/i.test(wants)) {
-    beats.push({
-      id: "beat-2",
-      title: "Features",
-      action: `Click the ${featureNav} link in the header navigation.`,
-      targetText: featureNav,
-      success: { visibleText: featureNav },
-      narration: `Features is where ${product} shows what the product actually does.`,
-    });
-  }
-  const pricingNav = nav.find((n) => /pric|plan/i.test(n));
-  if (pricingNav && /pric|plan|business/i.test(wants)) {
-    beats.push({
-      id: `beat-${beats.length + 1}`,
-      title: "Pricing",
-      action: `Click the ${pricingNav} link in the header navigation.`,
-      targetText: pricingNav,
-      success: { visibleText: pricingNav },
-      narration: `Pricing puts the plans on the table so you can pick a starting point.`,
-    });
-  }
-  const contactNav = nav.find((n) => /contact/i.test(n)) || (wants.includes("contact") ? "Contact" : "");
-  if (contactNav) {
-    beats.push({
-      id: `beat-${beats.length + 1}`,
-      title: "Contact",
-      action: `Click the ${contactNav} link in the header navigation.`,
-      targetText: contactNav,
-      success: { visibleText: "Book a walkthrough" },
-      narration: `Contact is where you leave details so the team can follow up.`,
-    });
-  }
-  if (/email|textbox|fill|type|form|company/i.test(wants) && (contactNav || site.inputs)) {
-    beats.push({
-      id: `beat-${beats.length + 1}`,
-      title: "Work email",
-      action: 'Type an email into the field labeled "Work email".',
-      targetText: "Work email",
-      success: { visibleText: "Work email" },
-      narration: "Work email is the field that identifies who is asking for a walkthrough.",
-    });
-    if (/company/i.test(wants)) {
-      beats.push({
-        id: `beat-${beats.length + 1}`,
-        title: "Company name",
-        action: 'Type a company into the field labeled "Company name".',
-        targetText: "Company name",
-        success: { visibleText: "Company name" },
-        narration: "Company name sits under the email so the walkthrough is booked for the right team.",
-      });
-    }
-  }
-  if (/business/i.test(wants)) {
-    beats.push({
-      id: `beat-${beats.length + 1}`,
-      title: "Business plan",
-      action: 'Find the plan or card labeled "Business" and scroll it into view.',
-      targetText: "Business",
-      success: { visibleText: "Business" },
-      narration: "The Business plan is the one built for teams that need room to grow.",
-    });
-  }
-  if (cta && beats.length < 3) {
-    beats.push({
-      id: `beat-${beats.length + 1}`,
-      title: "Primary CTA",
-      action: `Click the primary call to action labeled "${cta}".`,
-      targetText: cta,
-      success: { visibleText: cta },
-      narration: `From here, ${cta} is the next step if you want to try ${product}.`,
-    });
-  }
-  return beats.slice(0, 8);
 }
 
-async function geminiJson(prompt: string): Promise<PlanStep[] | null> {
+type GeminiPart = { text?: string; inline_data?: { mime_type: string; data: string } };
+
+function imagePart(imagePath?: string): GeminiPart | undefined {
+  if (!imagePath || !existsSync(imagePath)) return undefined;
+  try {
+    if (statSync(imagePath).size < 8_000 || statSync(imagePath).size > 4_500_000) return undefined;
+  } catch {
+    return undefined;
+  }
+  const buf = readFileSync(imagePath);
+  const mime = imagePath.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+  return { inline_data: { mime_type: mime, data: buf.toString("base64") } };
+}
+
+async function geminiJson(prompt: string, imagePath?: string): Promise<PlanStep[] | null> {
   const key = process.env.GEMINI_API_KEY;
   if (!key) return null;
   const preferred = process.env.GEMINI_TEXT_MODEL || "gemini-2.0-flash";
-  const models = [...new Set([preferred, "gemini-2.0-flash", "gemini-2.5-flash"])];
+  const models = [...new Set([preferred, "gemini-2.5-flash", "gemini-2.0-flash"])];
+  const parts: GeminiPart[] = [{ text: prompt }];
+  const img = imagePart(imagePath);
+  if (img) parts.push(img);
   for (const model of models) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0.4 },
+        contents: [{ parts }],
+        generationConfig: { responseMimeType: "application/json", temperature: 0.15 },
       }),
     });
     if (!res.ok) continue;
@@ -235,10 +182,12 @@ function mergeLockedGemini(beats: Beat[], steps: PlanStep[]): Beat[] {
     const successText = (s.successText || "").trim();
     const success = { ...b.success };
     if (successText && !isControlResidue(successText, b)) success.visibleText = successText;
+    const grounded = (s.targetText || "").trim();
     return {
       ...b,
+      action: b.action,
       narration: narration || b.narration,
-      targetText: (s.targetText || b.targetText)?.slice(0, 80),
+      targetText: (grounded || b.targetText)?.slice(0, 80),
       success,
     };
   });
@@ -248,74 +197,80 @@ async function geminiNarrateLocked(
   input: JobInput,
   beats: Beat[],
   site: Record<string, string>,
+  screenshotPath?: string,
 ): Promise<PlanStep[] | null> {
   const locked = beats.map((b, i) => ({
     id: i + 1,
     instruction: b.action,
     targetText: b.targetText,
   }));
-  return geminiJson(`You are writing voiceover and success checks for a narrated product demo.
+  return geminiJson(
+    `You ground a product-demo walkthrough onto a live page. A screenshot of the START URL is attached when present.
 
 Target website: ${input.website_url}
 Product name: ${input.product_name ?? "the product"}
-Page inventory (JSON):
-${JSON.stringify(site).slice(0, 4000)}
+Accessibility/text inventory (may be incomplete; prefer the screenshot):
+${JSON.stringify(site).slice(0, 3500)}
 
-LOCKED walkthrough — do not add, remove, or reorder steps. instruction is already final.
+LOCKED walkthrough — copy instruction verbatim. Do not add, remove, or reorder steps. Do not click Sign up, Log in, Pricing, Features, or any control the user did not list.
 ${JSON.stringify(locked, null, 2)}
 
-For each step return narration_draft and successText.
+For each locked step return targetText, successText, narration_draft.
 Rules:
-- narration_draft: 8–18 words, present tense, demo-host voice. Describe the screen AFTER the action. Never say click, type, show, assert, or read the instruction aloud.
-- successText: text that is on screen as a RESULT of this step. For type steps, use the typed value. For click steps, use destination UI (a field, heading, or empty-state copy on the new screen) — never the label of the button/link just clicked.
-- targetText: exact visible control label.
+- instruction: EXACT copy of the locked instruction. Never rewrite it.
+- targetText: if that control is visible on THIS screenshot, use its exact visible label (resolve fuzzy names). If it only appears after an earlier step, keep the user's wording — do not substitute a different homepage control.
+- successText: text on the destination screen AFTER the action. Typed value for type steps. For clicks, a field/heading on the new screen, never the clicked button's label.
+- narration_draft: 8–18 words, present tense, demo-host. Describe the screen after the action. Never say click, type, show, or assert.
 
-Return JSON only: { "steps": [ { "id": 1, "instruction": "<copy locked instruction>", "narration_draft": "...", "targetText": "...", "successText": "..." } ] }`);
+Return JSON only: { "steps": [ { "id": 1, "instruction": "<verbatim>", "narration_draft": "...", "targetText": "...", "successText": "..." } ] }`,
+    screenshotPath,
+  );
 }
 
-async function geminiPlan(input: JobInput, site: Record<string, string>): Promise<PlanStep[] | null> {
-  const prompt = `You are planning a narrated product demo video (same role as FounderBlaze APD planning).
+async function geminiPlan(
+  input: JobInput,
+  site: Record<string, string>,
+  screenshotPath?: string,
+): Promise<PlanStep[] | null> {
+  const prompt = `You plan a narrated product demo from a user brief and a screenshot of the start URL.
 
 Target website: ${input.website_url}
 Product name: ${input.product_name ?? "the product"}
-What we already observed on the live page (JSON):
-${JSON.stringify(site).slice(0, 4000)}
+Inventory JSON:
+${JSON.stringify(site).slice(0, 3500)}
 
-User brief (INTENT only — never read it aloud):
+User brief:
 """${input.script}"""
-${input.credentials?.username ? "Login credentials ARE available. Include type/fill steps for username and password when a form is required." : "No login credentials. Do not plan login/signup unless the page is already authenticated."}
-
-Break this into 4–10 ATOMIC browser steps, in the order a customer would actually walk the product.
+${input.credentials?.username ? "Login credentials ARE available. Include type/fill for username/password only if the brief requires login." : "No login. Do not plan login/signup."}
 
 Rules:
-- instruction: exactly one action (click one labeled control, type into one field, scroll once, or observe the current view). Never combine clicks.
-- If the brief lists Step 1, Step 2, … follow those steps in that exact order. One instruction per listed step. Do not skip type, dropdown, checkbox, or save steps.
-- Only add a homepage-observe first step when the brief is a tour, not when it already starts with a type/click instruction.
-- Click and type using EXACT labels from the inventory above when they match the brief. If the brief names a control that is not in the homepage inventory (it appears after a click), still use the brief's label.
-- If the brief mentions a form, textbox, email, or filling a field, include a type/fill step using the exact field label from the inventory or the page you just opened.
-- narration_draft: spoken voiceover for THAT screen after the action. 8–18 words, present tense, demo-host voice. Never "click", "show", "assert", "store". The picture for this line is the page AFTER the action, so describe what is now on screen.
-- targetText: the exact visible label for clicks/fields.
-- successText: text that should be on screen after the step.
+- Every instruction must be something the brief asked for. No extra Features/Pricing/Contact/Sign up tours.
+- If the brief lists Step 1, Step 2, … those ARE the only steps, in that order.
+- One atomic action per step. Use exact visible labels from the screenshot when they match the brief.
+- If a control is not on this screenshot (it appears after a click), keep the brief's label; do not replace it with a homepage control.
+- narration_draft: 8–18 words, screen AFTER the action.
+- successText: destination text, never the clicked control's label.
 - Do not add an "open the URL" step.
 
 Return JSON only: { "steps": [ { "id": 1, "instruction": "...", "narration_draft": "...", "targetText": "...", "successText": "..." } ] }`;
-
-  return geminiJson(prompt);
+  return geminiJson(prompt, screenshotPath);
 }
 
 async function persistPlan(
   args: { jobId: string; mode: "kane" | "naive" },
   source: string,
   beats: Beat[],
+  extra?: Record<string, unknown>,
 ) {
   const dir = workDir(args.jobId);
-  const payload = { source, beats };
+  const payload = { source, beats, ...extra };
   writeFileSync(join(dir, "plan.json"), JSON.stringify(payload, null, 2));
   await putObject(prefix(args.mode, args.jobId, "plan.json"), JSON.stringify(payload, null, 2), "application/json");
   await emitEvent(args.jobId, "phase", {
     phase: "plan",
     source,
     beatCount: beats.length,
+    vision: Boolean(extra?.vision),
     narrations: beats.map((b) => b.narration),
     actions: beats.map((b) => b.action),
   });
@@ -328,16 +283,18 @@ async function enrichLockedWalk(args: {
   site: Record<string, string>;
   skeleton: Beat[];
   source: "script" | "provided";
+  screenshotPath?: string;
 }): Promise<Beat[]> {
   let beats = tightenBeatGates(args.skeleton);
   try {
-    const steps = await geminiNarrateLocked(args.input, beats, args.site);
-    if (steps && steps.length >= 2) beats = tightenBeatGates(mergeLockedGemini(beats, steps));
+    const steps = await geminiNarrateLocked(args.input, beats, args.site, args.screenshotPath);
+    if (steps && steps.length >= 1) beats = tightenBeatGates(mergeLockedGemini(beats, steps));
     else beats = tightenBeatGates(fallbackHostVoice(beats));
   } catch {
     beats = tightenBeatGates(fallbackHostVoice(beats));
   }
-  await persistPlan(args, args.source, beats);
+  beats = beats.map((b, i) => ({ ...b, action: args.skeleton[i]?.action ?? b.action }));
+  await persistPlan(args, args.source, beats, { vision: Boolean(args.screenshotPath) });
   return beats;
 }
 
@@ -346,46 +303,44 @@ export async function planDemoBeats(args: {
   mode: "kane" | "naive";
   input: JobInput;
   site?: Record<string, string>;
+  screenshotPath?: string;
 }): Promise<{ beats: Beat[]; source: "provided" | "gemini" | "heuristic" | "script" }> {
   const site = args.site ?? {};
+  const shot = args.screenshotPath;
   if (args.input.beats?.length && beatsLookHosted(args.input.beats)) {
     const beats = tightenBeatGates(args.input.beats);
     await persistPlan(args, "provided", beats);
     return { beats, source: "provided" };
   }
-  if (args.input.beats?.length) {
+  const intents = intentsFromInput(args.input);
+  if (args.input.beats?.length || intents.length) {
+    const skeleton = args.input.beats?.length
+      ? args.input.beats
+      : intents.map((a, i) => skeletonFromAction(a, i));
     const beats = await enrichLockedWalk({
       ...args,
       site,
-      skeleton: args.input.beats,
-      source: "provided",
+      screenshotPath: shot,
+      skeleton,
+      source: args.input.beats?.length ? "provided" : "script",
     });
-    return { beats, source: "provided" };
-  }
-  const numbered = beatsFromNumberedScript(args.input);
-  if (numbered) {
-    const beats = await enrichLockedWalk({
-      ...args,
-      site,
-      skeleton: numbered,
-      source: "script",
-    });
-    return { beats, source: "script" };
+    return { beats, source: args.input.beats?.length ? "provided" : "script" };
   }
   let source: "gemini" | "heuristic" = "heuristic";
   let beats: Beat[];
   try {
-    const steps = await geminiPlan(args.input, site);
-    if (steps && steps.length >= 2) {
-      beats = toBeats(steps, args.input.product_name);
+    const steps = await geminiPlan(args.input, site, shot);
+    const kept = (steps ?? []).filter((s) => entailedByBrief(s.instruction || "", args.input.script));
+    if (kept.length >= 2) {
+      beats = toBeats(kept, args.input.product_name);
       source = "gemini";
     } else {
-      beats = heuristicPlan(args.input, site);
+      beats = homepageFallback(args.input, site);
     }
   } catch {
-    beats = heuristicPlan(args.input, site);
+    beats = homepageFallback(args.input, site);
   }
   beats = tightenBeatGates(beats);
-  await persistPlan(args, source, beats);
+  await persistPlan(args, source, beats, { vision: Boolean(shot) });
   return { beats, source };
 }

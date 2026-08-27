@@ -141,7 +141,8 @@ Store visible button labels as 'buttons' (comma-separated).
 Store visible text field labels or placeholders as 'inputs' (comma-separated).
 Store main section headings as 'headings'.
 Store visible plan or feature names if any as 'offerings'.
-Do not click through to checkout or signup unless the URL already is that page.`;
+Do not click through to checkout, signup, Features, Pricing, or any control except dismissing a cookie banner.
+Stay on the start URL.`;
   const argv = [
     "run",
     objective,
@@ -193,7 +194,22 @@ Use exact visible labels from this list when clicking or typing.
     "application/json",
   );
   await emitEvent(args.jobId, "phase", { phase: "site_map", final_state: state });
-  return { final_state: state, contextPath: join(dir, "context.md") };
+  const shotDir = join(dir, "understand-stills");
+  await harvestKaneVisuals(args.jobId, result.runEnd, shotDir, result.progress, true);
+  let screenshotPath: string | undefined;
+  if (existsSync(shotDir)) {
+    const names = readdirSync(shotDir)
+      .filter((n) => /\.(jpg|jpeg|png)$/i.test(n))
+      .sort();
+    const last = names[names.length - 1];
+    if (last) {
+      const src = join(shotDir, last);
+      const ext = src.toLowerCase().endsWith(".png") ? "png" : "jpg";
+      screenshotPath = join(dir, `understand.${ext}`);
+      copyFileSync(src, screenshotPath);
+    }
+  }
+  return { final_state: state, contextPath: join(dir, "context.md"), screenshotPath };
 }
 
 export async function kaneGenerate(args: {
