@@ -16,7 +16,7 @@ import { ApplicationFailure } from "@temporalio/activity";
 import { abortFromRunEnd, emitEvent } from "./control.js";
 import { spawnKane } from "./spawn.js";
 import { initKaneActionLog, kaneEventHandler, publishKaneLog, describeKaneEvent } from "./kane-log.js";
-import { requiredTools, tightenBeatGates, typedValueFromAction } from "./beat-gates.js";
+import { isControlResidue, requiredTools, tightenBeatGates, typedValueFromAction } from "./beat-gates.js";
 import { runWithRecordedChrome } from "./chrome-session.js";
 import { workDir } from "./workdir.js";
 
@@ -363,9 +363,22 @@ function eventHasTool(ev: Record<string, unknown>, tool: "click" | "type"): bool
 type BeatWindow = { beatIndex: number; startMs: number; endMs: number; passed?: boolean };
 
 function evKind(ev: Record<string, unknown>): string {
+  const view = describeKaneEvent(ev);
+  const blob = [ev.type, ev.event, ev.name, ev.kind, view?.tool, view?.text]
+    .map((x) => String(x ?? ""))
+    .join(" ")
+    .toLowerCase();
+  if (blob.includes("test_md_step_start")) return "test_md_step_start";
+  if (blob.includes("test_md_step_end")) return "test_md_step_end";
+  if (blob.includes("test_md_done")) return "test_md_done";
+  if (blob.includes("run_end")) return "run_end";
   const type = String(ev.type ?? ev.event ?? "").toLowerCase();
   if (type) return type;
-  return (describeKaneEvent(ev)?.tool ?? "").toLowerCase();
+  return (view?.tool ?? "").toLowerCase();
+}
+
+function eventStatus(ev: Record<string, unknown>): string {
+  return String(ev.status ?? describeKaneEvent(ev)?.status ?? "").toLowerCase();
 }
 
 function assignBeatWindows(
@@ -383,42 +396,30 @@ function assignBeatWindows(
       if (open != null) intervals.push({ start: open, end: t, passed: true });
       open = t;
     } else if (kind === "test_md_step_end" && open != null) {
-      const status = String(ev.status ?? describeKaneEvent(ev)?.status ?? "").toLowerCase();
-      intervals.push({ start: open, end: Math.max(open + 800, t), passed: status !== "failed" });
+      intervals.push({ start: open, end: Math.max(open + 800, t), passed: eventStatus(ev) !== "failed" });
       open = null;
     }
   }
   if (open != null) intervals.push({ start: open, end: tEnd, passed: true });
 
   const use = intervals.length > beats.length ? intervals.slice(-beats.length) : intervals;
-  if (use.length >= beats.length) {
-    return beats.map((_, i) => ({
-      beatIndex: i,
-      startMs: Math.max(0, use[i].start - t0),
-      endMs: i === beats.length - 1 ? span : Math.max(use[i].start - t0 + 800, use[i].end - t0),
-      passed: use[i].passed,
-    }));
-  }
-
-  const ends = stamped.filter(({ ev }) => {
-    const kind = evKind(ev);
-    return kind === "run_end";
-  });
-  if (ends.length >= beats.length) {
-    const chosen = ends.slice(-beats.length);
-    let prev = 0;
+  if (use.length > 0) {
     return beats.map((_, i) => {
-      const endMs = i === beats.length - 1 ? span : Math.max(prev + 800, chosen[i].t - t0);
-      const startMs = prev;
-      prev = endMs;
-      const status = String(chosen[i].ev.status ?? "").toLowerCase();
-      return { beatIndex: i, startMs, endMs, passed: status !== "failed" };
+      if (i < use.length) {
+        return {
+          beatIndex: i,
+          startMs: Math.max(0, use[i].start - t0),
+          endMs: i === beats.length - 1 ? span : Math.max(use[i].start - t0 + 800, use[i].end - t0),
+          passed: use[i].passed,
+        };
+      }
+      return { beatIndex: i, startMs: span, endMs: span, passed: false };
     });
   }
 
   return beats.map((_, i) => ({
     beatIndex: i,
-    startMs: Math.floor((i / Math.max(1, beats.length)) * span),
+    startMs: Math.max(0, Math.floor((i / Math.max(1, beats.length)) * span)),
     endMs: Math.floor(((i + 1) / Math.max(1, beats.length)) * span) || span,
     passed: true,
   }));
@@ -491,7 +492,9 @@ export async function compileTestMd(args: {
       const checks: string[] = [];
       if (b.success.urlContains) checks.push(`Verify the URL contains "${b.success.urlContains}".`);
       if (b.success.titleContains) checks.push(`Verify the page title contains "${b.success.titleContains}".`);
-      if (b.success.visibleText) checks.push(`Verify text "${b.success.visibleText}" is visible.`);
+      if (b.success.visibleText && !isControlResidue(b.success.visibleText, b)) {
+        checks.push(`Verify text "${b.success.visibleText}" is visible.`);
+      }
       if (b.success.headingContains) checks.push(`Verify a heading contains "${b.success.headingContains}".`);
       const value = typedValueFromAction(b.action);
       const tools = requiredTools(b.action);
@@ -650,12 +653,21 @@ export async function kaneTestmdRun(args: {
   });
 
   const missing: string[] = [];
-  const stepEnds = stamped.filter((s) => evKind(s.ev) === "test_md_step_start");
-  if (stepEnds.length && windows.length < beats.length) {
-    missing.push(`Kane only finished ${windows.length} of ${beats.length} demo steps`);
+  const mdEnds = stamped.filter((s) => evKind(s.ev) === "test_md_step_end");
+  const lastEnds = mdEnds.slice(-beats.length);
+  if (lastEnds.length < beats.length) {
+    missing.push(`Kane only finished ${lastEnds.length} of ${beats.length} demo steps`);
+  }
+  for (const s of lastEnds) {
+    if (eventStatus(s.ev) === "failed") {
+      missing.push("Kane failed a demo step after the walkthrough was already underway");
+      break;
+    }
   }
   for (const w of windows) {
-    if (w.passed === false) missing.push(`Beat ${w.beatIndex + 1} failed in Kane`);
+    if (w.passed === false && lastEnds.length < beats.length) {
+      missing.push(`Beat ${w.beatIndex + 1} failed in Kane`);
+    }
     const beat = beats[w.beatIndex];
     const needle = beat?.success.urlContains;
     if (!needle) continue;
@@ -685,6 +697,7 @@ export async function kaneTestmdRun(args: {
     }
   }
 
+  const uniq = [...new Set(missing)];
   await emitEvent(args.jobId, "ndjson", {
     phase: "author",
     exitCode: result.exitCode,
@@ -692,7 +705,7 @@ export async function kaneTestmdRun(args: {
     stills: harvested.stillCount,
     capturePath,
     windows,
-    missing,
+    missing: uniq,
     steps: result.progress.map((p) => describeKaneEvent(p as Record<string, unknown>)).filter(Boolean),
   });
   if (result.runEnd) {
@@ -710,9 +723,9 @@ export async function kaneTestmdRun(args: {
       capturePath.toLowerCase().endsWith(".mp4") ? "video/mp4" : "video/webm",
     );
   }
-  if (missing.length) {
+  if (uniq.length) {
     throw ApplicationFailure.create({
-      message: `Demo can't be recorded: Kane skipped required actions (${missing.join("; ")}).`,
+      message: `Demo can't be recorded: Kane skipped required actions (${uniq.join("; ")}).`,
       type: "unsupported_ui",
       nonRetryable: true,
     });
@@ -746,6 +759,26 @@ export async function rewriteFailedBeat(args: {
   const beat = args.beats[idx];
   if (!beat) return { beats: args.beats, rewritten: false };
   const before = beat.action;
+  const remarkBlob = remark + yamlText;
+  if (/wrong text|does not belong|looking for|assert/i.test(remarkBlob) || isControlResidue(beat.success.visibleText ?? "", beat)) {
+    const next = args.beats.map((b, i) => {
+      if (i !== idx) return b;
+      const success = { ...b.success };
+      if (success.visibleText && isControlResidue(success.visibleText, b)) delete success.visibleText;
+      return { ...b, success };
+    });
+    const repaired = tightenBeatGates(next);
+    await emitEvent(args.jobId, "heal", {
+      before,
+      after: repaired[idx]?.action,
+      remark,
+      result_code: rc,
+      beatId: beat.id,
+      evidenceFiles: evidence.files.length,
+      success: repaired[idx]?.success,
+    });
+    return { beats: repaired, rewritten: true, before, after: repaired[idx]?.action };
+  }
   let extra = " Click the labeled control in the hero or header navigation, not the footer.";
   if (rc === 320) extra = " Use a different navigation path; do not repeat the same click.";
   if (/cookie|consent/i.test(remark + yamlText)) extra = " Dismiss the banner first, then retry the action.";
