@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "bash .cursor/hooks/studio-verify-stop.sh",
+        "timeout": 1800,
+        "loop_limit": 3,
+        "failClosed": false
+      }
+    ]
+  }
+}
