@@ -1618,6 +1618,157 @@ textarea {
   }
 }
 
+.page-verified {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.verified-lead {
+  max-width: 42rem;
+  color: var(--muted-foreground);
+  line-height: 1.55;
+  margin: 0.85rem 0 1.4rem;
+}
+
+.verified-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem 1.25rem;
+  font-family: var(--font-pixel);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 1.25rem;
+}
+
+.verified-banner span {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+
+.verified-banner.blocked,
+.verified-stamp.blocked {
+  color: #b42318;
+}
+
+.verified-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 800px) {
+  .verified-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.verified-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.1rem 1.15rem;
+  background: var(--card);
+  box-shadow: var(--shadow-soft);
+}
+
+.verified-card.blocked {
+  border-color: #e4b4ae;
+}
+
+.verified-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.verified-stamp {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
+.verified-request {
+  font-size: 0.92rem;
+  color: var(--muted-foreground);
+  margin: 0.4rem 0 0.8rem;
+}
+
+.verified-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.verified-meta dt {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+
+.verified-meta dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.verified-files,
+.verified-flows {
+  font-size: 0.82rem;
+  color: var(--muted-foreground);
+}
+
+.verified-flows {
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0 0;
+}
+
+.verified-flows li {
+  margin-bottom: 0.65rem;
+}
+
+.verified-flows strong {
+  color: var(--foreground);
+}
+
+.verified-delta {
+  margin: 0.2rem 0 0;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
+.verified-delta.unexpected_change {
+  color: #b42318;
+}
+
+.verified-notes {
+  margin-top: 1.75rem;
+}
+
+.verified-notes h2 {
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+.verified-notes ul {
+  color: var(--muted-foreground);
+  line-height: 1.55;
+  padding-left: 1.15rem;
+}
+
+.verified-notes a {
+  color: var(--foreground);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

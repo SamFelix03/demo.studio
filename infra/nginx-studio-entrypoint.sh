@@ -10,6 +10,9 @@ server {
   location = /pitch {
     try_files /index.html =404;
   }
+  location = /verified {
+    try_files /index.html =404;
+  }
   location / {
     try_files \$uri \$uri/ /index.html;
   }

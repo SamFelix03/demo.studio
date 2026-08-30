@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { Client, Connection } from "@temporalio/client";
@@ -26,6 +28,26 @@ import { KaneDemoWorkflow, confirmScriptSignal } from "@demo-studio/workflows";
 loadDotEnv();
 const cfg = loadConfig();
 const db = getPool(cfg.databaseUrl);
+
+function repoRoot(): string {
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, "kane", "run-suite.sh"))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return process.cwd();
+}
+
+function readJsonFile(path: string): unknown | null {
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+}
 
 async function temporal() {
   let last: unknown;
@@ -77,6 +99,21 @@ async function main() {
       database: dbOk,
       temporal: cfg.temporalAddress,
       slots_free: slots,
+    };
+  });
+
+  app.get("/v1/verified", async () => {
+    const root = repoRoot();
+    const live = readJsonFile(join(root, ".studio-verify", "last-verify.json"));
+    const blocked = readJsonFile(join(root, "docs", "kane-runs", "verify", "blocked-run.json"));
+    const verified = readJsonFile(join(root, "docs", "kane-runs", "verify", "verified-run.json"));
+    const baseline = readJsonFile(join(root, ".studio-verify", "baseline.json"));
+    return {
+      live,
+      blocked,
+      verified,
+      baseline,
+      source: live ? "live" : "snapshot",
     };
   });
 

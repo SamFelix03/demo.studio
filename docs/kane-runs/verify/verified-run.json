@@ -1,0 +1,75 @@
+{
+  "startedAt": "2026-08-30T13:40:51.676Z",
+  "finishedAt": "2026-08-30T13:43:23.131Z",
+  "verdict": "passed",
+  "changeRequest": "restore Continue as type=button with onClick=next",
+  "agent": "Cursor",
+  "attempt": 1,
+  "maxAttempts": 3,
+  "changedFiles": [
+    "apps/api/src/server.ts",
+    "apps/studio/public/verified/blocked-run.json",
+    "apps/studio/src/App.tsx",
+    "apps/studio/src/pages/Pitch.tsx",
+    "apps/studio/src/pages/Verified.tsx",
+    "apps/studio/src/styles.css"
+  ],
+  "affectedFlows": [
+    "wizard"
+  ],
+  "unmappedFiles": [],
+  "skippedFlows": [],
+  "flows": [
+    {
+      "flow": "wizard",
+      "status": "passed",
+      "shareUrl": null,
+      "runDir": "/Users/sam/.testmuai/kaneai/sessions/7dd79abd-2914-4239-b2bd-b083f2d121aa/runs/3",
+      "reason": "Objective completed",
+      "failedStep": null,
+      "deltas": [
+        {
+          "key": "launch_heading",
+          "baseline": "Ready to record surveys.free",
+          "candidate": "Ready to record surveys.free",
+          "verdict": "SAME"
+        },
+        {
+          "key": "wizard_url",
+          "baseline": "http://localhost:5173/",
+          "candidate": "http://localhost:5173/",
+          "verdict": "SAME"
+        }
+      ],
+      "infraError": null
+    }
+  ],
+  "unexpectedCount": 0,
+  "timeline": [
+    {
+      "at": "2026-08-30T13:40:51.703Z",
+      "label": "Cursor changed 6 file(s)",
+      "kind": "change"
+    },
+    {
+      "at": "2026-08-30T13:40:51.703Z",
+      "label": "Blast radius: 1 protected flow(s)",
+      "kind": "impact"
+    },
+    {
+      "at": "2026-08-30T13:40:51.703Z",
+      "label": "Kane replaying generate wizard in a real browser",
+      "kind": "verify"
+    },
+    {
+      "at": "2026-08-30T13:43:23.131Z",
+      "label": "Generate wizard still behaves like the trusted build",
+      "kind": "proof"
+    },
+    {
+      "at": "2026-08-30T13:43:23.131Z",
+      "label": "Protected behavior verified — safe to ship",
+      "kind": "proof"
+    }
+  ]
+}

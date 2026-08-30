@@ -1,9 +1,10 @@
 import { NavLink, Route, Routes } from "react-router-dom";
-import { Clapperboard, Presentation, Sparkles } from "lucide-react";
+import { BadgeCheck, Clapperboard, Presentation, Sparkles } from "lucide-react";
 import Home from "./pages/Home";
 import Job from "./pages/Job";
 import Gallery from "./pages/Gallery";
 import Pitch from "./pages/Pitch";
+import Verified from "./pages/Verified";
 
 function Header() {
   return (
@@ -25,6 +26,10 @@ function Header() {
             <Presentation className="h-4" />
             Pitch
           </NavLink>
+          <NavLink to="/verified" className={({ isActive }) => `btn-nav ${isActive ? "on" : ""}`}>
+            <BadgeCheck className="h-4" />
+            Verified
+          </NavLink>
         </nav>
         <span className="header-spacer" aria-hidden />
       </div>
@@ -40,6 +45,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/pitch" element={<Pitch />} />
+          <Route path="/verified" element={<Verified />} />
           <Route path="/jobs" element={<Gallery />} />
           <Route path="/jobs/:id" element={<Job />} />
         </Routes>

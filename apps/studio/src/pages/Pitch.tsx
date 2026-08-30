@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
-const SLIDES = 8;
+const SLIDES = 9;
 
 const FLOW = [
   {
@@ -252,6 +252,62 @@ export default function Pitch() {
         )}
 
         {i === 7 && (
+          <section className="deck-slide deck-slide-wide">
+            <p className="panel-kicker">Scoring</p>
+            <h2 className="deck-title">Kane stops Cursor.</h2>
+            <ol className="wf">
+              <li>
+                <div className="wf-card">
+                  <header>
+                    <span className="wf-num">01</span>
+                  </header>
+                  <strong>Cursor</strong>
+                  <p>Edits Studio. Tries to end the turn.</p>
+                </div>
+                <span className="wf-join" aria-hidden>
+                  →
+                </span>
+              </li>
+              <li>
+                <div className="wf-card kane">
+                  <header>
+                    <span className="wf-num">02</span>
+                    <img className="wf-logo" src="/kane-cli.svg" alt="" />
+                  </header>
+                  <strong>Stop hook</strong>
+                  <p>Diff maps to TestMD. Kane replays in Chrome.</p>
+                </div>
+                <span className="wf-join" aria-hidden>
+                  →
+                </span>
+              </li>
+              <li>
+                <div className="wf-card">
+                  <header>
+                    <span className="wf-num">03</span>
+                  </header>
+                  <strong>Blocked</strong>
+                  <p>Continue-submit fails Access → Launch. Agent must fix.</p>
+                </div>
+                <span className="wf-join" aria-hidden>
+                  →
+                </span>
+              </li>
+              <li>
+                <div className="wf-card out">
+                  <header>
+                    <span className="wf-num">04</span>
+                  </header>
+                  <strong>Green</strong>
+                  <p>Kane matches the baseline. Cursor may stop.</p>
+                </div>
+              </li>
+            </ol>
+            <p className="deck-caption">Open /verified for the blocked and green Kane reports.</p>
+          </section>
+        )}
+
+        {i === 8 && (
           <section className="deck-slide">
             <p className="pixel-hero deck-word">Thank you</p>
             <blockquote className="deck-quote">

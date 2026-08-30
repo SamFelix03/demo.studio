@@ -1,0 +1,73 @@
+{
+  "startedAt": "2026-08-30T13:23:42.817Z",
+  "finishedAt": "2026-08-30T13:27:40.752Z",
+  "verdict": "blocked",
+  "changeRequest": "On Access, make Continue the form submit button and drop the stage click handler",
+  "agent": "Cursor",
+  "attempt": 1,
+  "maxAttempts": 3,
+  "changedFiles": [
+    ".gitignore",
+    "apps/api/src/server.ts",
+    "apps/studio/src/App.tsx",
+    "apps/studio/src/pages/Home.tsx",
+    "apps/studio/src/pages/Pitch.tsx",
+    "apps/studio/src/pages/Verified.tsx",
+    "apps/studio/src/styles.css"
+  ],
+  "affectedFlows": [
+    "wizard"
+  ],
+  "unmappedFiles": [
+    ".gitignore"
+  ],
+  "skippedFlows": [],
+  "flows": [
+    {
+      "flow": "wizard",
+      "status": "failed",
+      "shareUrl": null,
+      "runDir": "/Users/sam/.testmuai/kaneai/sessions/af63676e-f422-4247-bcde-c7691152d117/runs/0",
+      "reason": "AP determined agent is stuck — no viable actions remain",
+      "failedStep": "Site to Brief",
+      "deltas": [
+        {
+          "key": "launch_heading",
+          "baseline": "Launch",
+          "candidate": null,
+          "verdict": "MISSING"
+        },
+        {
+          "key": "wizard_url",
+          "baseline": "http://localhost:5173/",
+          "candidate": null,
+          "verdict": "MISSING"
+        }
+      ],
+      "infraError": null
+    }
+  ],
+  "unexpectedCount": 0,
+  "timeline": [
+    {
+      "at": "2026-08-30T13:23:42.843Z",
+      "label": "Cursor changed 7 file(s)",
+      "kind": "change"
+    },
+    {
+      "at": "2026-08-30T13:23:42.843Z",
+      "label": "Blast radius: 1 protected flow(s)",
+      "kind": "impact"
+    },
+    {
+      "at": "2026-08-30T13:23:42.843Z",
+      "label": "Kane replaying generate wizard in a real browser",
+      "kind": "verify"
+    },
+    {
+      "at": "2026-08-30T13:27:40.752Z",
+      "label": "Generate wizard failed in the browser at \"Site to Brief\"",
+      "kind": "fail"
+    }
+  ]
+}
