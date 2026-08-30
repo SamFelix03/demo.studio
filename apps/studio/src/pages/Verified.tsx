@@ -108,8 +108,10 @@ export default function Verified() {
         const res = await fetch("/v1/verified");
         if (res.ok) {
           const json = (await res.json()) as Payload;
-          if (!cancelled) setData(json);
-          return;
+          if (json.live || json.blocked || json.verified) {
+            if (!cancelled) setData(json);
+            return;
+          }
         }
       } catch {
         // Fall through to static snapshots baked into the Studio build.

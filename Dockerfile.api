@@ -5,6 +5,9 @@ COPY package.json package-lock.json ./
 COPY apps ./apps
 COPY packages ./packages
 COPY infra ./infra
+COPY kane ./kane
+COPY docs ./docs
+COPY .studio-verify ./.studio-verify
 RUN npm ci
 ENV NODE_ENV=production
 EXPOSE 4031
