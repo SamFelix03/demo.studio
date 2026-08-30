@@ -144,7 +144,6 @@ export default function Verified() {
 
   return (
     <div className="page-verified">
-      <p className="panel-kicker">Closed loop</p>
       <h1 className="pixel-hero">Kane caught it.</h1>
       <p className="verified-lead">
         Cursor builds Studio. A stop hook maps the git diff to committed TestMD. Kane CLI replays those
@@ -182,7 +181,7 @@ export default function Verified() {
           </li>
           <li>
             Scoring drill: plant Continue as <code>type=&quot;submit&quot;</code> without <code>onClick=next</code>, stop the
-            agent, Kane fails Access → Launch, Cursor restores the button. Artifacts in{" "}
+            agent, Kane fails at Site to Brief, Cursor restores the button. Artifacts in{" "}
             <code>docs/kane-runs/verify/</code>.
           </li>
           <li>

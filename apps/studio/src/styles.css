@@ -1624,6 +1624,10 @@ textarea {
   padding: 1.5rem 1rem 3rem;
 }
 
+.page-verified .pixel-hero {
+  text-align: center;
+}
+
 .verified-lead {
   max-width: 42rem;
   color: var(--muted-foreground);
