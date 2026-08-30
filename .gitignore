@@ -34,6 +34,11 @@ output-*/
 **/output-*/
 .testmuai/
 
+# Studio verify live state (config, flow-map, baseline stay committed)
+.studio-verify/last-verify.json
+.studio-verify/runs/
+.studio-verify/state/
+
 # Logs (keep committed Kane run samples)
 *.log
 !docs/kane-runs/*.log

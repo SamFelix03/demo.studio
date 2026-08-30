@@ -12,6 +12,7 @@ tags: [studio, smoke, api]
 Open http://localhost:4031/health.
 Verify the page contains "ok".
 Verify the page contains "true".
+Store the JSON field ok as 'health_ok'.
 Verify the page contains "database".
 Verify the page contains "temporal".
 Verify the page contains "7233" or "slots_free".

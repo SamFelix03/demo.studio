@@ -13,6 +13,12 @@
     "dev:worker": "npm run dev -w @demo-studio/worker",
     "dev:studio": "npm run dev -w @demo-studio/studio",
     "test:kane": "bash kane/run-suite.sh",
+    "test:studio-verify": "npm test -w @demo-studio/verify",
+    "verify": "npm run cli -w @demo-studio/verify -- verify",
+    "verify:baseline": "npm run cli -w @demo-studio/verify -- baseline",
+    "verify:status": "npm run cli -w @demo-studio/verify -- status",
+    "verify:plant": "node packages/studio-verify/scripts/plant.mjs",
+    "verify:restore": "node packages/studio-verify/scripts/restore.mjs",
     "build": "npm run build --workspaces --if-present"
   },
   "engines": {

@@ -1,8 +1,8 @@
 ---
 mode: testing
 url: http://localhost:5173
-max_steps: 20
-timeout: 90
+max_steps: 24
+timeout: 180
 tags: [studio]
 ---
 
@@ -32,6 +32,8 @@ Verify the page contains "Leave blank for public pages".
 Click only the button whose visible label is Continue. Do not click Generate demo. Do not press Enter.
 Wait until the heading contains "Ready to record".
 Verify the URL is still the generate page (no "/jobs/" in the path except the header).
+Store the h2 panel title that contains "Ready to record" as 'launch_heading'.
+Store the current URL as 'wizard_url'.
 Verify the page contains "I have the right to record this URL".
 Verify the page contains "Generate demo".
 Verify the page contains "surveys.free".

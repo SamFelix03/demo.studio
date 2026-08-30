@@ -1,0 +1,125 @@
+{
+  "commit": "ce1433c",
+  "createdAt": "2026-08-30T13:37:26.124Z",
+  "flows": {
+    "wizard": {
+      "test": "kane/studio_wizard_test.md",
+      "status": "passed",
+      "state": {
+        "button": "Add action",
+        "demo_field_visible": "true",
+        "field_labeled_what_is_this_demo_for_visible_check": "true",
+        "generate_demo_text_check": "true",
+        "generate_page_url_check": "http://localhost:5173/",
+        "launch_heading": "Ready to record surveys.free",
+        "leave_blank_for_public_pages_visible": "true",
+        "page_contains_add_action_check": "true",
+        "page_contains_birthday_rsvp_check": "true",
+        "page_contains_create_it_free_check": "true",
+        "page_contains_leave_blank_for_public_pages_check": "true",
+        "page_contains_on_screen_actions_check": "true",
+        "page_contains_sign_in_only_if_the_demo_needs_it": "true",
+        "page_contains_sign_in_only_if_the_demo_needs_it_check": "true",
+        "page_contains_what_kane_should_demonstrate_check": "true",
+        "page_heading": "What Kane should demonstrate",
+        "password_field_visible": "true",
+        "password_field_visible_check": "true",
+        "record_rights_text_check": "true",
+        "sample_text": "Create it free",
+        "sample_title": "Birthday RSVP",
+        "section": "On-screen actions",
+        "sign_in_guidance_visible": "true",
+        "surveys_free_text_check": "true",
+        "username_field_visible": "true",
+        "username_field_visible_check": "true",
+        "walkthrough_text_check": "true",
+        "wizard_rail_contains_site_brief_access_launch_check": "true",
+        "wizard_steps": "Site, Brief, Access, Launch",
+        "wizard_url": "http://localhost:5173/"
+      },
+      "runDir": "/Users/sam/.testmuai/kaneai/sessions/7f007856-4608-4b79-8a0a-3b4dda9cd11b/runs/3",
+      "shareUrl": null,
+      "durationS": 132
+    },
+    "validation": {
+      "test": "kane/studio_validation_test.md",
+      "status": "passed",
+      "state": {
+        "brief_step_opened": "false",
+        "site_step_still_shown": "true",
+        "site_step_still_shown_check": "true",
+        "url_required_message": "A website URL is required.",
+        "website_url_empty_and_brief_not_open_check": "true",
+        "website_url_required_error_check": "A website URL is required."
+      },
+      "runDir": "/Users/sam/.testmuai/kaneai/sessions/bb938ae4-8327-465e-b6f6-6a6a795fb3af/runs/0",
+      "shareUrl": null,
+      "durationS": 72
+    },
+    "landing": {
+      "test": "kane/studio_landing_test.md",
+      "status": "passed",
+      "state": {
+        "continue_button_visible": "true",
+        "continue_button_visible_check": "true",
+        "default_product": "surveys.free",
+        "demo_gallery_in_header": "true",
+        "demo_studio_heading_visible": "true",
+        "generate_in_header": "true",
+        "kane_cli_present": "true",
+        "kane_is_the_hands_present": "true",
+        "powered_by_present": "true",
+        "product_name": "surveys.free",
+        "product_name_field_contains_check": "surveys.free",
+        "product_name_field_visible_check": "true",
+        "site_you_want_to_demo_check": "true",
+        "website_url": "https://surveys.free/google-forms-alternative/",
+        "website_url_field_contains_check": "https://surveys.free/google-forms-alternative/",
+        "website_url_field_visible_check": "true",
+        "{{default_product}}": "surveys.free"
+      },
+      "runDir": "/Users/sam/.testmuai/kaneai/sessions/f8ad8f3e-67d6-4830-b72b-dcdab3b382ae/runs/1",
+      "shareUrl": null,
+      "durationS": 71
+    },
+    "gallery": {
+      "test": "kane/studio_gallery_test.md",
+      "status": "passed",
+      "state": {
+        "chrome_slot_present_check": "false",
+        "demo_gallery_text_check": "Demo Gallery",
+        "demo_tile_visible": "true",
+        "gallery_heading": "Demo Gallery",
+        "job_page_url_check": "false",
+        "kane_cli_present_check": "false",
+        "kane_text_check": "Kanecompletedsurveys.freehttps://surveys.free/google-forms-alternative/27/08/2026, 18:26:23",
+        "library_text_check": "Library",
+        "no_demos_yet_text_check": "false",
+        "page_heading": "Demo Gallery",
+        "run_console_present_check": "false",
+        "section_label": "Library",
+        "url_contains_jobs_check": "http://localhost:5173/jobs",
+        "visible_demo_entry": "Kane"
+      },
+      "runDir": "/Users/sam/.testmuai/kaneai/sessions/3eab82a7-f5d7-4f8e-98f0-c854d8c574c8/runs/1",
+      "shareUrl": null,
+      "durationS": 118
+    },
+    "api_health": {
+      "test": "kane/api_health_test.md",
+      "status": "passed",
+      "state": {
+        "health_ok": "{\"ok\":true,\"database\":true,\"temporal\":\"localhost:7233\",\"slots_free\":2}",
+        "page_contains_7233_check": "True",
+        "page_contains_database_check": "True",
+        "page_contains_ok_check": "True",
+        "page_contains_slots_free_check": "True",
+        "page_contains_temporal_check": "True",
+        "page_contains_true_check": "True"
+      },
+      "runDir": "/Users/sam/.testmuai/kaneai/sessions/039bbb6d-8523-4671-bd96-68eb3cfb3f01/runs/0",
+      "shareUrl": null,
+      "durationS": 59
+    }
+  }
+}

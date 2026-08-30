@@ -1,0 +1,63 @@
+{
+  "studioUrl": "http://localhost:5173",
+  "apiUrl": "http://localhost:4031/health",
+  "variablesFile": ".testmuai/variables/local.json",
+  "perTestTimeoutS": 180,
+  "hookBudgetS": 1200,
+  "maxAttempts": 3,
+  "fallbackFlow": "landing",
+  "ignore": [
+    "packages/activities/**",
+    "packages/workflows/**",
+    "packages/shared/**",
+    "packages/studio-verify/**",
+    ".studio-verify/**",
+    ".testmuai/**",
+    ".cursor/**",
+    "kane/**",
+    "docs/**",
+    "infra/**",
+    "scripts/**",
+    "README.md",
+    ".gitignore",
+    "package-lock.json",
+    "package.json"
+  ],
+  "flows": {
+    "wizard": {
+      "test": "kane/studio_wizard_test.md",
+      "label": "Generate wizard",
+      "risk": "HIGH",
+      "protect": ["launch_heading", "wizard_url"],
+      "observe": []
+    },
+    "validation": {
+      "test": "kane/studio_validation_test.md",
+      "label": "Site URL validation",
+      "risk": "HIGH",
+      "protect": ["url_required_message"],
+      "observe": []
+    },
+    "landing": {
+      "test": "kane/studio_landing_test.md",
+      "label": "Landing and branding",
+      "risk": "MED",
+      "protect": ["default_product"],
+      "observe": []
+    },
+    "gallery": {
+      "test": "kane/studio_gallery_test.md",
+      "label": "Demo Gallery",
+      "risk": "LOW",
+      "protect": ["gallery_heading"],
+      "observe": []
+    },
+    "api_health": {
+      "test": "kane/api_health_test.md",
+      "label": "API health",
+      "risk": "MED",
+      "protect": [],
+      "observe": ["health_ok"]
+    }
+  }
+}

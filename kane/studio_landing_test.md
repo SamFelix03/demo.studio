@@ -2,7 +2,7 @@
 mode: testing
 url: http://localhost:5173
 max_steps: 16
-timeout: 90
+timeout: 180
 tags: [studio, smoke]
 ---
 
@@ -25,6 +25,7 @@ Verify a field labeled Website URL is visible.
 Verify the Website URL field contains "surveys.free".
 Verify a field labeled Product name is visible.
 Verify the Product name field contains "surveys.free".
+Store the Product name field value as 'default_product'.
 Verify a Continue button is visible.
 Do not click Continue.
 Do not click Generate demo.

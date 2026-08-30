@@ -1,0 +1,16 @@
+{
+  "name": "@demo-studio/verify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/cli.ts",
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "test": "node --import tsx --test src/kane.test.ts src/comparator.test.ts src/flow-map.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

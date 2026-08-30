@@ -2,7 +2,7 @@
 mode: testing
 url: http://localhost:5173
 max_steps: 20
-timeout: 90
+timeout: 180
 tags: [studio, smoke]
 ---
 
@@ -15,6 +15,7 @@ tags: [studio, smoke]
 Click Demo Gallery in the header.
 Verify the URL contains "/jobs".
 Verify the page contains "Demo Gallery".
+Store the visible Demo Gallery heading as 'gallery_heading'.
 Verify the page contains "Library".
 Verify the page contains "Kane" or "No demos yet".
 

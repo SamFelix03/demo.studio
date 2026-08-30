@@ -1,0 +1,22 @@
+{
+  "apps/studio/src/pages/Home.tsx": ["landing", "wizard", "validation"],
+  "apps/studio/src/pages/Gallery.tsx": ["gallery"],
+  "apps/studio/src/pages/Job.tsx": ["gallery"],
+  "apps/studio/src/App.tsx": ["landing", "gallery"],
+  "apps/studio/src/pages/Verified.tsx": [],
+  "apps/studio/src/pages/Pitch.tsx": [],
+  "apps/studio/public/**": [],
+  "apps/studio/src/components/**": ["landing", "gallery"],
+  "apps/studio/src/styles.css": ["landing", "gallery"],
+  "apps/studio/src/main.tsx": ["landing", "gallery"],
+  "apps/studio/index.html": ["landing"],
+  "apps/api/**": ["api_health"],
+  "packages/activities/**": [],
+  "packages/workflows/**": [],
+  "packages/shared/**": [],
+  "packages/studio-verify/**": [],
+  "kane/**": [],
+  ".studio-verify/**": [],
+  ".cursor/**": [],
+  "docs/**": []
+}
