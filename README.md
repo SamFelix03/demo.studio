@@ -4,7 +4,7 @@ The feature is done — then you still have to click through it on camera so eve
 
 That’s why we built **[demo.studio](https://studio-production-d6af.up.railway.app/)**: give a URL, a goal, who’s watching, and the on-screen actions — get a narrated **demo.mp4** of the live product. [Kane CLI](https://www.testmuai.com/support/docs/kane-cli-introduction/) is the hands on the page (and the agent that tests Studio end to end). Don’t record the walkthrough. Let Kane walk it.
 
-Live app: [studio-production-d6af.up.railway.app](https://studio-production-d6af.up.railway.app/) · Pitch: [/pitch](https://studio-production-d6af.up.railway.app/pitch). Clone this repo and follow [Quick start](#quick-start) to run the same stack locally. Watch the demo on [YouTube](https://www.youtube.com/watch?v=NlvFnU8O-b8)
+Live app: [studio-production-d6af.up.railway.app](https://studio-production-d6af.up.railway.app/) · Pitch: [/pitch](https://studio-production-d6af.up.railway.app/pitch) · Verified: [/verified](https://studio-production-d6af.up.railway.app/verified). Clone this repo and follow [Quick start](#quick-start) to run the same stack locally. Watch the demo on [YouTube](https://www.youtube.com/watch?v=NlvFnU8O-b8)
 
 ## Table of contents
 
@@ -16,6 +16,12 @@ Live app: [studio-production-d6af.up.railway.app](https://studio-production-d6af
 - [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
 - [Kane CLI verification](#kane-cli-verification)
+  - [Contest bars](#contest-bars)
+  - [Product path — Kane as hands](#product-path--kane-as-hands)
+  - [Studio TestMD suite](#studio-testmd-suite-overview)
+  - [studio-verify](#studio-verify)
+  - [Cursor stop hook](#cursor-stop-hook)
+  - [Proof Kane caught a bug](#proof-kane-caught-a-bug)
 - [How it works](#how-it-works)
   - [What the operator does](#what-the-operator-does)
   - [Job lifecycle](#job-lifecycle)
@@ -76,7 +82,7 @@ How demo.studio matches Lane 3:
 - An operator (or an upstream agent) supplies English actions. Kane CLI executes them in a real Chrome, with `--agent`, TestMD, stored variables, and local context. There are no CSS selectors in the product path.
 - The same Kane process that acts is the process that is filmed. Playwright is only a CDP camera on Kane’s painted `http(s)` tab; it does not click.
 - Kane’s NDJSON is the live telemetry of the product: the Studio console, beat timestamps, heal evidence, and abort codes all come from Kane, not from a mock.
-- A committed TestMD suite also drives **Studio itself**, so Kane can walk the generator UI the same way it walks a third-party site.
+- A committed TestMD suite also drives **Studio itself**. [`studio-verify`](#studio-verify) maps a Cursor working-tree diff onto those files, replays them with Kane, and a **stop hook** will not let the coding agent finish until protected observables match a trusted baseline.
 
 ## Important links
 
@@ -85,8 +91,10 @@ How demo.studio matches Lane 3:
 | **Demo video** | https://www.youtube.com/watch?v=NlvFnU8O-b8 |
 | **Live Studio** | https://studio-production-d6af.up.railway.app/ |
 | **Pitch deck** | https://studio-production-d6af.up.railway.app/pitch |
+| **Verified (Kane gate)** | https://studio-production-d6af.up.railway.app/verified |
 | **API health** | https://api-production-27b6.up.railway.app/health |
 | **Kane Studio test results** | [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md) |
+| **Studio verify proof** | [`docs/kane-runs/verify/`](docs/kane-runs/verify/) — blocked + green Kane reports |
 | **Example product run** (surveys.free) | [`docs/kane-runs/surveys-free-job.json`](docs/kane-runs/surveys-free-job.json) · [log](docs/kane-runs/surveys-free-form-builder.log) · [NDJSON](docs/kane-runs/surveys-free-form-builder.jsonl) |
 
 ## Built with
@@ -96,11 +104,12 @@ This codebase was written in **Cursor**, using the **Cursor Grok 4.6** model, wi
 | Service / tool | Purpose in demo.studio |
 | --- | --- |
 | **Kane CLI** (`kane-cli`) | Browser agent: login, credits, `run`, `generate`, `testmd run`, NDJSON, result codes, evidence zips. |
-| **Cursor (Grok 4.6)** | Authored the monorepo, workflows, TestMD compiler, Studio UI, and the Studio TestMD suite. |
+| **Cursor (Grok 4.6)** | Authored the monorepo, workflows, TestMD compiler, Studio UI, the Studio TestMD suite, and studio-verify. |
+| **studio-verify** | Git-diff → Kane TestMD replay → baseline compare; Cursor stop hook. |
 | **Temporal** | Durable `KaneDemoWorkflow`: slots, retries, heartbeats, cancel. |
 | **PostgreSQL** | Jobs, event log, Chrome slot leases. |
 | **Supabase Storage** | Private bucket for MP4, captions, TestMD, Kane logs, stills metadata. |
-| **Google Gemini** | Optional beat planner when the brief is not already numbered `Step N:`. |
+| **Google Gemini** | Optional beat planner: grounds labels and voiceover from `understand.jpg`. Cannot add, drop, or reorder the wizard’s `walkthrough`. |
 | **LMNT** | Cloud TTS when `LMNT_API_KEY` is set; otherwise macOS `say` / espeak. |
 | **Playwright Chromium** | Launches Chrome with `--remote-debugging-port` and JPEG-screenshots the active Kane tab. |
 | **ffmpeg** | Stills → silent video, mux to WAV, concat, captions. |
@@ -148,53 +157,150 @@ npm run dev:studio
 
 Generate is prefilled for surveys.free. Third-party URLs require the “I have the right to record” checkbox.
 
-Walk Studio with Kane (Studio must already be serving):
+Walk Studio with Kane (Studio `:5173` and API `:4031` must already be serving):
 
 ```bash
 npm run test:kane
-# or a single file:
-kane-cli --local testmd run kane/studio_test.md --agent --headless
+npm run test:studio-verify # NDJSON parse + comparator (no credits)
+npm run verify:baseline    # record trusted observables (once, on a known-good build)
+npm run verify:status
+npm run verify -- --all
 ```
 
-Results from the 21 August 2026 run are in [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md).
+The 21 August 2026 suite rollup is in [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md). The 30 August Continue-submit catch (blocked then green) is in [`docs/kane-runs/verify/`](docs/kane-runs/verify/).
 
 ## Kane CLI verification
 
-Kane CLI is both the **runtime** that films a third-party site and the **checker** that walks demo.studio itself. Cursor Grok 4.6 wrote the TestMD; Kane executed it in Chrome.
+The contest asked for a working app, Kane that actually exercised it, and an agent↔Kane loop. demo.studio uses Kane in **three** places, all `--agent`, none of them selector scripts.
 
-| Layer | What Kane does |
+| Layer | Kane’s job | Where |
+| --- | --- | --- |
+| **Product (Lane 3)** | Hands on a third-party site. `KaneDemoWorkflow` runs `kane-cli run` then `testmd run` on the customer URL and films that session. | [`packages/workflows`](packages/workflows/src/index.ts), [`packages/activities`](packages/activities/src/kane.ts) |
+| **Studio suite** | Hands on demo.studio itself. Committed `kane/*_test.md` walk Generate, Gallery, and `/health`. They never click Generate (that would spawn a second Kane job). | [`kane/`](kane/), `npm run test:kane` |
+| **Gate (studio-verify)** | Same suite, driven by a Cursor **stop hook**. Git diff → mapped flows → Kane replay → compare to a committed baseline. A miss continues the agent; a match lets it stop. | [`packages/studio-verify`](packages/studio-verify), [`.cursor/hooks.json`](.cursor/hooks.json) |
+
+The product path is unchanged by the gate. `packages/activities` and `packages/workflows` are ignored by the flow map so a Generate-pipeline edit does not require clicking Generate.
+
+### Contest bars
+
+Judges score Ships, Verified, Closed loop, and Craft equally; ties break on Verified, then Closed loop. The hoped-for demo is: hook fires Kane, Kane fails, the agent edits, Kane runs again.
+
+- **Ships.** A user loads Studio, fills Site → Brief → Access → Launch, and gets a narrated MP4 of the live product. Deployed: [studio-production-d6af.up.railway.app](https://studio-production-d6af.up.railway.app/). Primary flow is Kane on [surveys.free](https://surveys.free/google-forms-alternative/), not a mock.
+- **Verified.** Kane exercised both surfaces. Product: [`docs/kane-runs/surveys-free-form-builder.jsonl`](docs/kane-runs/surveys-free-form-builder.jsonl). Studio: 21 Aug **6 / 6 passed** ([`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md)); that run also **caught** Continue on Access submitting Generate (`type="submit"`). 30 Aug: the same class of bug was replanted locally; Kane failed the wizard at Site to Brief; after restore, `launch_heading` matched the baseline ([`docs/kane-runs/verify/`](docs/kane-runs/verify/)). Verdicts use `test_md_summary.overall_status`, not the first `run_end` and not Kane’s process exit code alone.
+- **Closed loop.** Cursor Grok 4.6 writes Studio. On stop, [`.cursor/hooks.json`](.cursor/hooks.json) runs `studio-verify hook`. A behavioral miss returns `{ followup_message }` (the Cursor equivalent of blocking completion) with flow, failed step, protected key, baseline vs observed, and NDJSON path. The agent must repair **the app**, not the TestMD. `loop_limit` is 3. Heal inside a Generate job (`rewriteFailedBeat`) is Kane→pipeline on the customer site; the stop hook is Kane→coding agent on Studio. Both are closed loops; the contest’s “hook fires Kane” moment is the stop hook.
+- **Craft.** Kane is browser infrastructure for a film (Lane 3), not a smoke test bolted onto a todo app. The gate is the extra: diff-scoped replay, named observables, fail-open on infra, `/verified` for judges.
+
+### Product path — Kane as hands
+
+`KaneDemoWorkflow`: health → Chrome slot → `kanePreflight` (`run`) → `kaneUnderstand` (`run`, harvests `understand.jpg`) → `planDemoBeats` (wizard posts `walkthrough: filledActions`; Gemini may ground labels/VO from the screenshot but **cannot add, drop, or reorder** actions) → TTS → `compileTestMd` + `kaneTestmdRun` in **one** Chrome with a CDP JPEG camera → `assembleDemo`. Playwright does not click. Destination-not-control success lives in [`beat-gates.ts`](packages/activities/src/beat-gates.ts). Incomplete Kane runs fail the job; assemble does not equal-slice a failed session and mark beats passed.
+
+Example film evidence: [`docs/kane-runs/surveys-free-job.json`](docs/kane-runs/surveys-free-job.json), [log](docs/kane-runs/surveys-free-form-builder.log), [NDJSON](docs/kane-runs/surveys-free-form-builder.jsonl).
+
+### Studio TestMD suite {#studio-testmd-suite-overview}
+
+`kane-cli --local testmd run … --agent --headless`. Store-as lines persist named observables for the gate. Timeouts on the long walks are 180s.
+
+| File | Covers | Protected / observed |
+| --- | --- | --- |
+| [`kane/studio_landing_test.md`](kane/studio_landing_test.md) | Branding, Site defaults | `default_product` |
+| [`kane/studio_wizard_test.md`](kane/studio_wizard_test.md) | Site → Brief → Access → Launch; no Generate click | `launch_heading`, `wizard_url` |
+| [`kane/studio_validation_test.md`](kane/studio_validation_test.md) | Empty URL stays on Site | `url_required_message` |
+| [`kane/studio_gallery_test.md`](kane/studio_gallery_test.md) | Library + optional job tile | `gallery_heading` |
+| [`kane/api_health_test.md`](kane/api_health_test.md) | `GET /health` | `health_ok` (observed, not blocking) |
+| [`kane/studio_test.md`](kane/studio_test.md) | Smoke Brief + Gallery | used by `npm run test:kane` only |
+
+21 Aug (`kane-cli` 0.8.4): **6 / 6 passed**. Continue-submit was already fixed in that rollup.
+
+### studio-verify
+
+[`packages/studio-verify`](packages/studio-verify) (`@demo-studio/verify`) is the gate, not a second product. Kane still walks Studio; this package decides *which* TestMD files to replay after a Cursor edit and whether the coding agent may stop.
+
+Committed:
+
+| Path | Role |
 | --- | --- |
-| Product | `KaneDemoWorkflow` → `kane-cli run` / `testmd run` on the customer URL (example: surveys.free form builder). |
-| Studio | Committed `kane/*_test.md` files against localhost Generate, Gallery, and `/health`. |
+| [`.studio-verify/config.json`](.studio-verify/config.json) | Studio/API URLs, timeouts, per-flow TestMD + `protect` / `observe` keys, ignore globs |
+| [`.studio-verify/flow-map.json`](.studio-verify/flow-map.json) | Git path → flows. Empty array = “this file is not behavior.” |
+| [`.studio-verify/baseline.json`](.studio-verify/baseline.json) | Trusted Kane observations from a known-good build |
 
-**Latest run** (21 August 2026, `kane-cli` 0.8.4, `.env` credentials, `--local --headless --agent`): **6 / 6 passed**.
+Gitignored (live only): `.studio-verify/last-verify.json`, `.studio-verify/runs/*.ndjson`, `.studio-verify/state/` (lock + per-session attempt counter).
 
-| Test | Result |
+```text
+git diff (unstaged + staged + untracked)
+        → drop ignore globs (Lane 3 packages, docs, kane/, the tool itself, README, lockfile)
+        → map remaining paths to flows (Home.tsx → landing + wizard + validation)
+        → unmapped studio file → fallback flow `landing` only
+        → kane-cli --local testmd run <file> --agent --headless
+        → parse NDJSON: file verdict = test_md_summary.overall_status
+          (first run_end is step one of a multi-step file — never the suite result)
+        → harvest store-as from final_state, context.variables, and context.memory
+        → compare protect keys to baseline (SAME / UNEXPECTED_CHANGE / MISSING;
+          blank stored string = MISSING, not an empty surprise)
+        → persist last-verify.json
+```
+
+**Verdicts.** `blocked` = Kane `failed` or a protected key is `UNEXPECTED_CHANGE`. `error` = could not tell (kane-cli exit 2/3, empty stream, timeout, budget skip, Studio/API down). `passed` = every selected flow passed and no unexpected deltas. `observe` keys (today `health_ok`) are allowed to move; they never block. `MISSING` is not a block by itself — Kane still has to fail the TestMD or a protected value has to *change*. One flake retry per flow. Highest risk first (`wizard`, `validation`). Hook budget 1200s; per-test timeout 180s.
+
+**CLI** (`tsx packages/studio-verify/src/cli.ts`, wrapped by npm scripts):
+
+| Command | What it does | Exit |
+| --- | --- | --- |
+| `npm run verify:status` | Diff, blast radius, baseline observables — no browser | 0 |
+| `npm run verify:baseline [-- --flow wizard]` | Record green Kane observations; refuses to overwrite from a red run | 0 / 2 if app down |
+| `npm run verify [-- --all \| --flow a,b]` | Replay mapped (or named) flows vs baseline | 0 passed, 1 blocked, 2 error |
+| `npm run cli -w @demo-studio/verify -- hook` | Cursor stop (stdin payload). Always exit 0; block via JSON | 0 |
+| `npm run verify:plant` / `verify:restore` | Local Continue-submit drill; **do not commit** planted `Home.tsx` | — |
+| `npm run test:studio-verify` | 16 unit tests: NDJSON parse, comparator, globs (no credits) | 0/1 |
+
+Unit tests encode the load-bearing parse: the file verdict is `test_md_summary`, not the first `run_end`; exit 2/3 is infra, never “your UI broke.”
+
+Blast radius (behavior-relevant only):
+
+| Glob | Flows |
 | --- | --- |
-| [`kane/api_health_test.md`](kane/api_health_test.md) | passed — health JSON |
-| [`kane/studio_landing_test.md`](kane/studio_landing_test.md) | passed — branding and Site defaults |
-| [`kane/studio_test.md`](kane/studio_test.md) | passed — Brief + Gallery |
-| [`kane/studio_wizard_test.md`](kane/studio_wizard_test.md) | passed — Launch without auto-submit |
-| [`kane/studio_validation_test.md`](kane/studio_validation_test.md) | passed — empty URL stays on Site |
-| [`kane/studio_gallery_test.md`](kane/studio_gallery_test.md) | passed — library + job tile |
+| `apps/studio/src/pages/Home.tsx` | landing, wizard, validation |
+| `Gallery.tsx`, `Job.tsx` | gallery |
+| `App.tsx`, `components/**`, `styles.css` | landing, gallery |
+| `apps/api/**` | api_health |
+| `packages/activities/**`, `workflows/**`, `shared/**` | ignored (Lane 3 film path) |
+| `kane/**`, `.studio-verify/**`, `.cursor/**`, `docs/**`, Pitch, Verified | ignored / no flows |
 
-An earlier run found Continue submitting Generate; that is fixed and this run stayed on Launch. Details: [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md).
+`GET /v1/verified` returns `{ live, blocked, verified, baseline, source }`: live `last-verify.json` when present, else committed snapshots under `docs/kane-runs/verify/` (copied to `apps/studio/public/verified/` for the SPA).
 
-The surveys.free **product** walkthrough (Kane as hands on the live form builder) is unchanged: [`docs/kane-runs/surveys-free-form-builder.log`](docs/kane-runs/surveys-free-form-builder.log).
+### Cursor stop hook
+
+[`.cursor/hooks.json`](.cursor/hooks.json) `stop` → [`studio-verify-stop.sh`](.cursor/hooks/studio-verify-stop.sh) → `tsx …/cli.ts hook`. Cursor timeout 1800s, `loop_limit` 3, `failClosed: false` (a crashed hook must not freeze the agent). Missing `tsx` prints `{}` and exits 0.
+
+Stdout contract:
+
+| Situation | stdout | Agent |
+| --- | --- | --- |
+| No mapped flows (docs, README, Lane 3 packages, Pitch, Verified) | `{}` | may stop; no Chrome |
+| Behavioral `blocked` | `{ "followup_message": "<flow, failed step, key, baseline vs observed, NDJSON path>" }` | must continue; repair **Studio**, not TestMD / baseline |
+| Infra, no baseline, app down, lock held, attempt cap (`maxAttempts` 3), re-entry (`stop_hook_active`) | `{}` plus a log note | may stop; protected behavior was **not** confirmed |
+
+Requires Studio `http://localhost:5173` and API `http://localhost:4031/health`. The hook logs in Kane from `.env` if `KANE_USERNAME` / `KANE_ACCESS_KEY` are set.
+
+### Proof Kane caught a bug
+
+1. **Historical (21 Aug).** Continue on Access submitted Generate. TestMD required Launch (“Ready to record”) and a Generate URL with no `/jobs/<id>`. Fixed: Continue is `type="button"` with `onClick={next}`; form `onSubmit` only `preventDefault`s. Evidence: [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md).
+2. **Closed-loop drill (30 Aug).** `npm run verify:plant` set Continue to `type="submit"` and dropped `onClick={next}`. Kane failed at **Site to Brief** (Continue never advanced). [`blocked-run.json`](docs/kane-runs/verify/blocked-run.json) + [`verify-wizard-blocked.ndjson`](docs/kane-runs/verify/verify-wizard-blocked.ndjson). Restore; Kane passed with `launch_heading=Ready to record surveys.free` SAME. [`verified-run.json`](docs/kane-runs/verify/verified-run.json). `Home.tsx` on the branch is the good button. Runbook: [`docs/kane-runs/verify/DEMO.md`](docs/kane-runs/verify/DEMO.md). Do not prompt “fix the Continue bug” — that skips Kane.
+
+[`/verified`](https://studio-production-d6af.up.railway.app/verified) renders live `GET /v1/verified` or the committed snapshots under `apps/studio/public/verified/`. Pitch includes a stop-hook slide.
 
 ## How it works
 
-You fill in a short wizard (site, brief, optional login, launch). Studio posts a job to the API; Temporal runs **KaneDemoWorkflow**. Kane CLI logs in and checks credits, opens the real URL to make sure the page is reachable (no CAPTCHA / paywall / login wall that would block the demo), then explores the live UI and remembers what buttons and fields are there. The brief becomes a list of beats (from your numbered steps, or Gemini if needed). Each beat gets a spoken voiceover (LMNT). Kane then walks those steps in **one** Chrome window while a camera (Playwright over CDP) takes JPEG stills of the painted page—not a separate clicker. ffmpeg cuts those stills to match each voiceover, stitches the clips, uploads `demo.mp4` plus captions and logs to storage, and the Gallery shows the finished film.
+You fill in a short wizard (site, brief, optional login, launch). Studio posts a job to the API; Temporal runs **KaneDemoWorkflow**. Kane CLI logs in and checks credits, opens the real URL to make sure the page is reachable (no CAPTCHA / paywall / login wall that would block the demo), then explores the live UI and remembers what buttons and fields are there. The wizard’s `walkthrough` (and numbered `Step N:` script) is the locked beat skeleton; Gemini may ground labels and voiceover from `understand.jpg` but cannot invent extra steps. Each beat gets a spoken voiceover (LMNT). Kane then walks those steps in **one** Chrome window while a camera (Playwright over CDP) takes JPEG stills of the painted page—not a separate clicker. ffmpeg cuts those stills to match each voiceover, stitches the clips, uploads `demo.mp4` plus captions and logs to storage, and the Gallery shows the finished film.
 
 In plain English, end to end:
 
 1. **You describe the demo** — URL, product name, goal, audience, and the clicks/types you want on screen (e.g. Birthday RSVP on surveys.free).
-2. **Studio packages the brief** — four steps: Site → Brief → Access → Launch; actions become numbered `Step N:` lines and a job is created.
+2. **Studio packages the brief** — four steps: Site → Brief → Access → Launch; actions are posted as `walkthrough` and as numbered `Step N:` lines in `script`.
 3. **The API starts the workflow** — job lands in Postgres; Temporal `KaneDemoWorkflow` begins.
 4. **Kane is ready** — `whoami` / login / balance / window size; a free Chrome debugging slot is leased so jobs do not collide.
 5. **Preflight** — Kane opens the start URL and aborts early if the site is blocked (CAPTCHA, Cloudflare, paywall, hard login wall, MFA).
-6. **Understand** — a second Kane run maps live nav, inputs, and CTAs into `context.md` / variables for later steps.
-7. **Plan beats** — use beats you already supplied, or parse `Step N:`, or ask Gemini; success checks are tightened so the homepage text cannot fake a later click.
+6. **Understand** — a second Kane run maps live nav, inputs, and CTAs into `context.md` / variables and copies the last screenshot to `understand.jpg`.
+7. **Plan beats** — lock the user’s `walkthrough` (or numbered `Step N:`); Gemini may ground labels and VO from the screenshot but cannot add/reorder actions; success checks are destination-not-control.
 8. **Optional confirm** — if required, you approve the planned script before filming continues.
 9. **Voiceover** — each beat’s narration becomes a WAV (LMNT in cloud; `say` / edge-tts / espeak as fallbacks).
 10. **Author on camera** — TestMD is compiled; Kane runs `testmd run --agent` in the same Chrome while JPEG stills of the real tab are recorded.
@@ -210,9 +316,9 @@ Studio is a four-step wizard ([`apps/studio/src/pages/Home.tsx`](https://github.
 3. **Access** — optional username/password (stored redacted in Postgres; secrets are passed only into the workflow args).
 4. **Launch** — attestation, then `POST /v1/jobs`.
 
-`composeScript` ([L22–L32](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Home.tsx#L22-L32)) folds goal, audience, outcome, and actions into one `script` string whose walkthrough section is **`Step 1: … Step 2: …`**. That numbering is the contract between the UI and the planner. Submit always sends `mode: "kane"` ([L92–L108](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Home.tsx#L92-L108)).
+`composeScript` ([L22–L32](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Home.tsx#L22-L32)) folds goal, audience, outcome, and actions into one `script` string whose walkthrough section is **`Step 1: … Step 2: …`**. Submit always sends `mode: "kane"` and `walkthrough: filledActions` ([L98–L108](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Home.tsx#L98-L108)) so the planner can lock those intents even if Gemini runs.
 
-The API validates the body ([`createJobBodySchema`](https://github.com/SamFelix03/demo.studio/blob/main/packages/shared/src/schema.ts#L68-L71)), redacts credentials ([`sanitizeInputForDb`](https://github.com/SamFelix03/demo.studio/blob/main/packages/shared/src/schema.ts#L73-L90)), inserts the job ([`insertJob`](https://github.com/SamFelix03/demo.studio/blob/main/packages/shared/src/db.ts#L47)), and starts Temporal workflow `KaneDemoWorkflow` ([`apps/api/src/server.ts` L73–L117](https://github.com/SamFelix03/demo.studio/blob/main/apps/api/src/server.ts#L73-L117)).
+The API validates the body ([`createJobBodySchema`](https://github.com/SamFelix03/demo.studio/blob/main/packages/shared/src/schema.ts#L68-L71)), redacts credentials ([`sanitizeInputForDb`](https://github.com/SamFelix03/demo.studio/blob/main/packages/shared/src/schema.ts#L73-L90)), inserts the job ([`insertJob`](https://github.com/SamFelix03/demo.studio/blob/main/packages/shared/src/db.ts#L47)), and starts Temporal workflow `KaneDemoWorkflow` ([`apps/api/src/server.ts` L120+](https://github.com/SamFelix03/demo.studio/blob/main/apps/api/src/server.ts)).
 
 ### Job lifecycle
 
@@ -224,8 +330,8 @@ Studio brief  →  POST /v1/jobs  →  KaneDemoWorkflow
                    toolingHealth      │  kane-cli whoami / login / balance / config
                    Chrome slot        │  lease a local debugging port
                    kanePreflight      │  kane-cli run  (walls, CAPTCHA, login)
-                   kaneUnderstand     │  kane-cli run  (nav, fields, CTAs → context.md)
-                   planDemoBeats      │  numbered script or Gemini
+                   kaneUnderstand     │  kane-cli run  (nav, fields, CTAs, understand.jpg)
+                   planDemoBeats      │  locked walkthrough; Gemini grounds VO/labels only
                    [optional signal]  │  confirm-script
                    synthesizeBeats    │  LMNT or say → WAV per beat
                    compileTestMd      │  demo_test.md + helpers
@@ -237,14 +343,14 @@ Step by step, matching workflow lines:
 
 1. **`health`** — [`toolingHealth`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/control.ts#L23-L71) proves `kane-cli` is on PATH and authenticated. [`acquireChromeSlot`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/control.ts#L73-L90) leases a debugging port so two jobs do not share a profile.
 2. **`preflight`** — [`kanePreflight`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L50-L128) runs Kane on the start URL with a store-and-assert objective (cookie banner, CAPTCHA, Cloudflare, login wall, MFA, paywall). [`abortFromRunEnd`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/control.ts#L136-L169) maps Kane `result_code` and `final_state` into a non-retryable abort the UI can show.
-3. **`understand`** — [`kaneUnderstand`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L130-L197) runs a second `kane-cli run` that **stores** live labels (`nav_items`, `hero_cta`, `inputs`, …) into Kane `final_state`, then writes `context.md` and `variables.json` for later TestMD. The Chrome slot is released so planning/TTS do not hold a browser.
-4. **`plan`** — [`planDemoBeats`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/plan.ts#L240-L302). If the job already has `beats`, those win. Else [`beatsFromNumberedScript`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/plan.ts#L31-L53) parses `Step N:`. Else Gemini ([`geminiPlan`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/plan.ts#L181-L237)) using the understand inventory. [`tightenBeatGates`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/beat-gates.ts#L19-L43) rewrites success checks so a click is not “verified” by text that was already on the homepage.
+3. **`understand`** — [`kaneUnderstand`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L130-L197) runs a second `kane-cli run` that **stores** live labels (`nav_items`, `hero_cta`, `inputs`, …) into Kane `final_state`, writes `context.md` / `variables.json`, and copies the last Kane screenshot to `understand.jpg` for the planner. The Chrome slot is released so planning/TTS do not hold a browser.
+4. **`plan`** — [`planDemoBeats`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/plan.ts#L301-L347). `input.walkthrough` (or numbered `Step N:` / provided `beats`) is the locked skeleton. Gemini may fill narration and destination success from the understand screenshot; it cannot add, drop, or reorder actions. Fuzzy briefs drop steps the script does not entail instead of inventing a Features/Pricing tour. [`tightenBeatGates`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/beat-gates.ts) rewrites success so a click is not “verified” by the control just clicked.
 5. **`await_script` (optional)** — if `require_script_confirm`, the workflow waits on [`confirmScriptSignal`](https://github.com/SamFelix03/demo.studio/blob/main/packages/workflows/src/index.ts#L27) until `POST /v1/jobs/:id/confirm-script`.
 6. **`tts`** — [`synthesizeBeats`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/media.ts#L284-L346) synthesizes each beat’s `narration` to WAV and records durations. Those durations are the edit list for the film.
 7. **`author`** — a second Chrome slot. [`compileTestMd`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L468-L535) writes `demo_test.md`. [`kaneTestmdRun`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L537-L669) runs **one** `testmd run --agent` while [`runWithRecordedChrome`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/chrome-session.ts#L29-L104) JPEG-captures the painted tab.
 8. **`upload`** — [`assembleDemo`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/media.ts#L348-L537) slices stills per beat window, muxes each slice to that beat’s WAV ([`sealBeat`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/media.ts#L226)), concatenates, uploads `demo.mp4` / captions / timeline, and marks the job completed.
 
-The job page ([`apps/studio/src/pages/Job.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Job.tsx)) polls job JSON and `/v1/jobs/:id/events`, renders [`PipelineStage`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/components/PipelineStage.tsx#L7-L15) and [`KaneConsole`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/components/KaneConsole.tsx), and can cancel via Temporal ([`POST /v1/jobs/:id/cancel`](https://github.com/SamFelix03/demo.studio/blob/main/apps/api/src/server.ts#L187-L193)).
+The job page ([`apps/studio/src/pages/Job.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Job.tsx)) polls job JSON and `/v1/jobs/:id/events`, renders [`PipelineStage`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/components/PipelineStage.tsx#L7-L15) and [`KaneConsole`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/components/KaneConsole.tsx), and can cancel via Temporal (`POST /v1/jobs/:id/cancel`).
 
 ### Why one Chrome session
 
@@ -310,7 +416,7 @@ Working directory for browser commands is the per-job folder [`workDir`](https:/
 | `generate <prompt> --agent --url` | Optional TestMD generation | [`kaneGenerate` L210](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L210) |
 | `generate --save --req <id> --out <dir> --agent` | Persist generated suite | [L221–L224](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L221-L224) |
 | `testmd run <demo_test.md> --agent --name --timeout --max-steps [--local-context] [--variables-file]` | **Live author path** | [`kaneTestmdRun` L556–L571](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L556-L571) |
-| `testmd run kane/studio_test.md --agent` | Walk Studio UI | [`kane/studio_test.md`](https://github.com/SamFelix03/demo.studio/blob/main/kane/studio_test.md) |
+| `testmd run kane/studio_*_test.md --agent` | Walk Studio UI / health | [`kane/`](kane/), also spawned by [`studio-verify`](packages/studio-verify/src/kane.ts) |
 
 ### Health, login, balance, and window
 
@@ -331,13 +437,14 @@ Flags: `--agent --mode action --url <website> --timeout 60 --max-steps 15` plus 
 - `context.md` — instructions Kane later loads with `--local-context`
 - `variables.json` — site JSON plus optional secret username/password for `--variables-file`
 - Storage copies of both
+- `understand.jpg` — last Kane screenshot of the start URL, passed into `planDemoBeats`
 - `final_state` returned to the planner
 
-This is how Kane enables planning: Gemini (or the numbered-script path) sees **labels Kane actually read**, not a hallucinated sitemap.
+This is how Kane enables planning: Gemini sees **labels Kane actually read** plus the start-page screenshot. The user’s `walkthrough` stays locked; Gemini does not invent a site tour.
 
 ### Generate (`kane-cli generate`)
 
-[`kaneGenerate`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L199-L244) calls Kane’s generator (`generate <prompt> --agent --url`), then `generate --save --req <request_id> --out <dir>` to pull the markdown. The live workflow compiles TestMD itself from beats; this helper is the Kane-native generator wired for the same job directory.
+[`kaneGenerate`](https://github.com/SamFelix03/demo.studio/blob/main/packages/activities/src/kane.ts#L220) calls Kane’s generator (`generate <prompt> --agent --url`), then `generate --save --req <request_id> --out <dir>` to pull the markdown. The live workflow compiles TestMD itself from beats; this helper is the Kane-native generator wired for the same job directory.
 
 ### Compile TestMD
 
@@ -435,29 +542,25 @@ Plus `final_state` booleans `has_captcha`, `has_bot_challenge`, `has_mfa`, `has_
 
 ### Studio TestMD suite
 
-| File | Covers |
-| --- | --- |
-| [`kane/helpers/open_generate.md`](kane/helpers/open_generate.md) | Open `:5173`, stay on localhost |
-| [`kane/studio_landing_test.md`](kane/studio_landing_test.md) | Branding, header, Site defaults |
-| [`kane/studio_test.md`](kane/studio_test.md) | Smoke: Brief + Gallery |
-| [`kane/studio_wizard_test.md`](kane/studio_wizard_test.md) | Site → Brief → Access → Launch (no Generate click) |
-| [`kane/studio_validation_test.md`](kane/studio_validation_test.md) | Empty Website URL stays on Site |
-| [`kane/studio_gallery_test.md`](kane/studio_gallery_test.md) | Gallery list and optional job tile |
-| [`kane/api_health_test.md`](kane/api_health_test.md) | `GET /health` JSON |
-| [`kane/helpers/dismiss_chrome.md`](kane/helpers/dismiss_chrome.md) | Cookie/consent helper used by generated job TestMD |
+Committed files under [`kane/`](kane/): `studio_landing_test.md`, `studio_wizard_test.md`, `studio_validation_test.md`, `studio_gallery_test.md`, `api_health_test.md`, smoke `studio_test.md`, plus helpers `open_generate.md` and `dismiss_chrome.md`. Store-as lines (`launch_heading`, `wizard_url`, `url_required_message`, `default_product`, `gallery_heading`, `health_ok`) are the studio-verify observables. Coverage table, gate, and proof: [Kane CLI verification](#kane-cli-verification).
 
 ```bash
 npm run test:kane
+npm run test:studio-verify
+npm run verify:baseline
+npm run verify -- --all
 ```
 
 ## Studio UI
 
 | Surface | File | What Kane-related work it does |
 | --- | --- | --- |
-| Shell / nav | [`apps/studio/src/App.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/App.tsx) | Gallery + Generate; pixel `demo.studio` wordmark |
-| Wizard | [`apps/studio/src/pages/Home.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Home.tsx) | Numbered script, Kane-only job create, TestMu + Kane “Powered by” |
+| Shell / nav | [`apps/studio/src/App.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/App.tsx) | Gallery, Generate, Pitch, Verified |
+| Wizard | [`apps/studio/src/pages/Home.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Home.tsx) | `walkthrough` + numbered `Step N:` script, Kane-only job create |
 | Job | [`apps/studio/src/pages/Job.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Job.tsx) | Pipeline, console, video, cancel, log/caption downloads |
 | Gallery | [`apps/studio/src/pages/Gallery.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Gallery.tsx) | Completed MP4 tiles |
+| Pitch | [`apps/studio/src/pages/Pitch.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Pitch.tsx) | Lane 3 film + stop-hook / verified slide |
+| Verified | [`apps/studio/src/pages/Verified.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/pages/Verified.tsx) | Blocked / green Kane reports for the Studio gate |
 | Pipeline | [`apps/studio/src/components/PipelineStage.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/components/PipelineStage.tsx) | health → preflight → understand → plan → tts → author → seal |
 | Console | [`apps/studio/src/components/KaneConsole.tsx`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/src/components/KaneConsole.tsx) | Live Kane steps |
 | Proxy | [`apps/studio/vite.config.ts`](https://github.com/SamFelix03/demo.studio/blob/main/apps/studio/vite.config.ts#L6) | `/v1` and `/health` → `:4031` |
@@ -468,8 +571,9 @@ Implemented in [`apps/api/src/server.ts`](https://github.com/SamFelix03/demo.stu
 
 | Method | Path | Role |
 | --- | --- | --- |
-| `GET` | `/health` | Postgres ping, Temporal address, free Chrome slots ([L56–L71](https://github.com/SamFelix03/demo.studio/blob/main/apps/api/src/server.ts#L56-L71)) |
-| `POST` | `/v1/jobs` | Create Kane job, start `KaneDemoWorkflow` ([L73](https://github.com/SamFelix03/demo.studio/blob/main/apps/api/src/server.ts#L73)) |
+| `GET` | `/health` | Postgres ping, Temporal address, free Chrome slots |
+| `GET` | `/v1/verified` | Live `last-verify.json` plus committed blocked/verified snapshots and baseline |
+| `POST` | `/v1/jobs` | Create Kane job, start `KaneDemoWorkflow` |
 | `GET` | `/v1/jobs` | List |
 | `GET` | `/v1/jobs/:id` | Job + signed artifact URLs |
 | `GET` | `/v1/jobs/:id/events` | JSON or SSE (`Accept: text/event-stream`) |
@@ -477,7 +581,7 @@ Implemented in [`apps/api/src/server.ts`](https://github.com/SamFelix03/demo.stu
 | `POST` | `/v1/jobs/:id/confirm-script` | Signal edited beats |
 | `POST` | `/v1/jobs/:id/cancel` | Temporal cancel |
 
-Optional header `Idempotency-Key`. Body `mode` is `kane`. `input` follows [`jobInputSchema`](https://github.com/SamFelix03/demo.studio/blob/main/packages/shared/src/schema.ts#L35-L66): `website_url`, `script`, optional `beats`, `product_name`, `credentials`, `voice`, `viewport`, `require_script_confirm`, `i_have_right_to_record`.
+Optional header `Idempotency-Key`. Body `mode` is `kane`. `input` follows [`jobInputSchema`](https://github.com/SamFelix03/demo.studio/blob/main/packages/shared/src/schema.ts): `website_url`, `script`, optional `walkthrough` (locked on-screen actions), optional `beats`, `product_name`, `credentials`, `voice`, `viewport`, `require_script_confirm`, `i_have_right_to_record`.
 
 ## Workers, storage, and data
 
@@ -523,6 +627,7 @@ Those files are what Kane did in the browser, separate from TTS and ffmpeg.
 | --- | --- |
 | Studio | https://studio-production-d6af.up.railway.app/ |
 | Pitch | https://studio-production-d6af.up.railway.app/pitch |
+| Verified | https://studio-production-d6af.up.railway.app/verified |
 | API | https://api-production-27b6.up.railway.app/health |
 
 [`infra/docker-compose.yml`](infra/docker-compose.yml) can run Postgres + Temporal if you do not already have them locally. Docker is not required for local Node + Temporal CLI.
@@ -541,14 +646,17 @@ Share `DATABASE_URL`, Temporal, Supabase, LMNT (`LMNT_VOICE` e.g. `violet`), Kan
 ## Repository layout
 
 ```text
-apps/api            Fastify job API
-apps/worker         Temporal workers
-apps/studio         Generate / job / gallery
-packages/shared     Config, Zod, Postgres, Supabase
-packages/activities Kane spawn, TestMD, CDP camera, TTS, ffmpeg
-packages/workflows  KaneDemoWorkflow
-- `kane/` committed TestMD (Studio suite + job helpers)
-- `docs/kane-runs/` Kane product logs and Studio e2e results
-infra/              Optional compose
-env.example         Template (copy to .env)
+apps/api               Fastify job API (includes GET /v1/verified)
+apps/worker            Temporal workers
+apps/studio            Generate / job / gallery / pitch / verified
+packages/shared        Config, Zod, Postgres, Supabase
+packages/activities    Kane spawn, TestMD, CDP camera, TTS, ffmpeg
+packages/workflows     KaneDemoWorkflow
+packages/studio-verify Kane NDJSON parse, baseline compare, Cursor stop hook
+kane/                  Committed TestMD (Studio suite + job helpers)
+.studio-verify/        Flow map, config, trusted baseline (live runs gitignored)
+.cursor/               Stop hook → studio-verify
+docs/kane-runs/        Product logs, Studio e2e results, verify proof
+infra/                 Optional compose; nginx SPA routes for /pitch and /verified
+env.example            Template (copy to .env)
 ```
