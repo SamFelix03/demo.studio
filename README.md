@@ -16,12 +16,15 @@ Live app: [studio-production-d6af.up.railway.app](https://studio-production-d6af
 - [Prerequisites](#prerequisites)
 - [Quick start](#quick-start)
 - [Kane CLI verification](#kane-cli-verification)
-  - [Contest bars](#contest-bars)
+  - [Judge the gate in 90 seconds](#judge-the-gate-in-90-seconds)
+  - [The failure Kane catches](#the-failure-kane-catches)
+  - [How this meets the brief](#how-this-meets-the-brief)
   - [Product path — Kane as hands](#product-path--kane-as-hands)
-  - [Studio TestMD suite](#studio-testmd-suite-overview)
-  - [studio-verify](#studio-verify)
+  - [The Kane contract](#the-kane-contract)
+  - [How studio-verify decides](#how-studio-verify-decides)
   - [Cursor stop hook](#cursor-stop-hook)
-  - [Proof Kane caught a bug](#proof-kane-caught-a-bug)
+  - [How the demo regression was produced](#how-the-demo-regression-was-produced)
+  - [Honesty: limitations](#honesty-limitations)
 - [How it works](#how-it-works)
   - [What the operator does](#what-the-operator-does)
   - [Job lifecycle](#job-lifecycle)
@@ -82,7 +85,7 @@ How demo.studio matches Lane 3:
 - An operator (or an upstream agent) supplies English actions. Kane CLI executes them in a real Chrome, with `--agent`, TestMD, stored variables, and local context. There are no CSS selectors in the product path.
 - The same Kane process that acts is the process that is filmed. Playwright is only a CDP camera on Kane’s painted `http(s)` tab; it does not click.
 - Kane’s NDJSON is the live telemetry of the product: the Studio console, beat timestamps, heal evidence, and abort codes all come from Kane, not from a mock.
-- A committed TestMD suite also drives **Studio itself**. [`studio-verify`](#studio-verify) maps a Cursor working-tree diff onto those files, replays them with Kane, and a **stop hook** will not let the coding agent finish until protected observables match a trusted baseline.
+- A committed TestMD suite also drives **Studio itself**. [`studio-verify`](#how-studio-verify-decides) maps a Cursor working-tree diff onto those files, replays them with Kane, and a **stop hook** will not let the coding agent finish until protected observables match a trusted baseline.
 
 ## Important links
 
@@ -181,12 +184,93 @@ The contest asked for a working app, Kane that actually exercised it, and an age
 
 The product path is unchanged by the gate. `packages/activities` and `packages/workflows` are ignored by the flow map so a Generate-pipeline edit does not require clicking Generate.
 
-### Contest bars
+The loop, in one sentence: **Cursor edits Studio → tries to stop → studio-verify maps the diff → Kane CLI replays the matching TestMD in Chrome → unexpected behavior comes back as `followup_message` → agent fixes the app → re-verify → allow.**
+
+### Judge the gate in 90 seconds
+
+**Live console: [studio-production-d6af.up.railway.app/verified](https://studio-production-d6af.up.railway.app/verified)** — Generate, Gallery, Pitch, and the verification page. Kane itself runs locally (it needs Chrome and a Kane login); production `/verified` renders the last committed reports from [`docs/kane-runs/verify/`](docs/kane-runs/verify/).
+
+Four numbers, all reproducible from this repository:
+
+| | |
+| --- | --- |
+| **5** | protected Studio flows Kane must hold (`wizard`, `validation`, `landing`, `gallery`, `api_health`) |
+| **6 / 6** | Studio TestMD files passed on 21 Aug (`kane-cli` 0.8.4) — [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md) |
+| **16** | unit tests on the parser and comparator — no Chrome, no credits (`npm run test:studio-verify`) |
+| **`followup_message`** | how Cursor is blocked until protected behavior holds (max 3 attempts). Not Claude Code’s exit 2 — Cursor’s stop-hook contract is JSON on stdout. |
+
+```bash
+npm run dev:api && npm run dev:studio   # :4031 and :5173 already up
+
+npm i -g @testmuai/kane-cli && kane-cli login
+npm run verify:status
+npm run verify -- --all                 # expect: wizard launch_heading SAME, exit 0
+open http://localhost:5173/verified     # same JSON the hook wrote
+```
+
+### The failure Kane catches
+
+Everything below is real output from this repository, produced on 2026-08-30 by Kane CLI driving a real Chrome. See [How the demo regression was produced](#how-the-demo-regression-was-produced) for exactly which part of it was deliberate.
+
+Continue on every wizard step is `type="submit"` with no `onClick={next}`. The feature of the plant “works” in the sense that the form still `preventDefault`s — Kane does **not** enqueue a Generate job. Nothing on Launch is reachable. The coding agent is stopped:
+
+```text
+STUDIO VERIFY BLOCKED COMPLETION
+
+Kane CLI replayed a committed Studio TestMD flow against localhost and it did not match the trusted baseline.
+Repair the application code (not the tests in kane/, not .studio-verify/baseline.json) and end your turn again.
+
+Generate wizard no longer passes in a real browser.
+  Failed step  Site to Brief
+  Kane says    AP determined agent is stuck — no viable actions remain
+  NDJSON       .studio-verify/runs/verify-wizard.ndjson
+
+The requested change — "On Access, make Continue the form submit button and drop the stage click handler" — does not authorize this behavior to move.
+
+Fix the regression in apps/studio (typically Home.tsx Continue must stay type="button" with onClick={next}).
+Do not edit kane/*_test.md to make this pass. Do not rewrite the baseline.
+
+Attempt 1 of 3. See /verified and .studio-verify/last-verify.json.
+```
+
+The whole comparison, verbatim from the committed reports:
+
+```text
+BLOCKED — Kane failure (not an UNEXPECTED_CHANGE)
+
+  changed files   7  (Home.tsx in the blast radius → wizard)
+  flows replayed  wizard
+
+  Generate wizard  [failed]
+      failed step              Site to Brief
+      launch_heading           Launch                         → null                         MISSING
+      wizard_url               http://localhost:5173/         → null                         MISSING
+```
+
+```text
+VERIFIED — protected Studio behavior is unchanged
+
+  flows replayed  wizard
+
+  Generate wizard  [passed]
+      launch_heading           Ready to record surveys.free   → Ready to record surveys.free   SAME
+      wizard_url               http://localhost:5173/         → http://localhost:5173/         SAME
+```
+
+Read those two blocks in order:
+
+**Blocked is a Kane failure, not a drifted number.** Continue never advanced Site → Brief, so Kane never stored `launch_heading`. The observables read `MISSING` because the browser never reached Launch — silence is not treated as `SAME`. The hook still blocks, because the file verdict is `failed`.
+
+**Verified is the same flow after restore.** `launch_heading` is again `Ready to record surveys.free`. That string is what Chrome rendered, committed in [`verified-run.json`](docs/kane-runs/verify/verified-run.json).
+
+The 21 Aug suite rollup is the historical catch of this class of bug (Continue on Access used to submit Generate). Evidence: [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md).
+
+### How this meets the brief
 
 Judges score Ships, Verified, Closed loop, and Craft equally; ties break on Verified, then Closed loop. The hoped-for demo is: hook fires Kane, Kane fails, the agent edits, Kane runs again.
 
 - **Ships.** A user loads Studio, fills Site → Brief → Access → Launch, and gets a narrated MP4 of the live product. Deployed: [studio-production-d6af.up.railway.app](https://studio-production-d6af.up.railway.app/). Primary flow is Kane on [surveys.free](https://surveys.free/google-forms-alternative/), not a mock.
-- **Verified.** Kane exercised both surfaces. Product: [`docs/kane-runs/surveys-free-form-builder.jsonl`](docs/kane-runs/surveys-free-form-builder.jsonl). Studio: 21 Aug **6 / 6 passed** ([`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md)); that run also **caught** Continue on Access submitting Generate (`type="submit"`). 30 Aug: the same class of bug was replanted locally; Kane failed the wizard at Site to Brief; after restore, `launch_heading` matched the baseline ([`docs/kane-runs/verify/`](docs/kane-runs/verify/)). Verdicts use `test_md_summary.overall_status`, not the first `run_end` and not Kane’s process exit code alone.
+- **Verified.** Kane exercised both surfaces. Product: [`docs/kane-runs/surveys-free-form-builder.jsonl`](docs/kane-runs/surveys-free-form-builder.jsonl). Studio: 21 Aug **6 / 6 passed**; that run also **caught** Continue on Access submitting Generate. 30 Aug: the same class of bug was replanted locally; Kane failed the wizard at Site to Brief; after restore, `launch_heading` matched the baseline ([`docs/kane-runs/verify/`](docs/kane-runs/verify/)). Verdicts use `test_md_summary.overall_status`, not the first `run_end` and not Kane’s process exit code alone.
 - **Closed loop.** Cursor Grok 4.6 writes Studio. On stop, [`.cursor/hooks.json`](.cursor/hooks.json) runs `studio-verify hook`. A behavioral miss returns `{ followup_message }` (the Cursor equivalent of blocking completion) with flow, failed step, protected key, baseline vs observed, and NDJSON path. The agent must repair **the app**, not the TestMD. `loop_limit` is 3. Heal inside a Generate job (`rewriteFailedBeat`) is Kane→pipeline on the customer site; the stop hook is Kane→coding agent on Studio. Both are closed loops; the contest’s “hook fires Kane” moment is the stop hook.
 - **Craft.** Kane is browser infrastructure for a film (Lane 3), not a smoke test bolted onto a todo app. The gate is the extra: diff-scoped replay, named observables, fail-open on infra, `/verified` for judges.
 
@@ -196,9 +280,9 @@ Judges score Ships, Verified, Closed loop, and Craft equally; ties break on Veri
 
 Example film evidence: [`docs/kane-runs/surveys-free-job.json`](docs/kane-runs/surveys-free-job.json), [log](docs/kane-runs/surveys-free-form-builder.log), [NDJSON](docs/kane-runs/surveys-free-form-builder.jsonl).
 
-### Studio TestMD suite {#studio-testmd-suite-overview}
+### The Kane contract
 
-`kane-cli --local testmd run … --agent --headless`. Store-as lines persist named observables for the gate. Timeouts on the long walks are 180s.
+`kane-cli --local testmd run … --agent --headless`. Store-as lines persist named observables for the gate. Timeouts on the long walks are 180s. The suite never clicks Generate.
 
 | File | Covers | Protected / observed |
 | --- | --- | --- |
@@ -211,50 +295,62 @@ Example film evidence: [`docs/kane-runs/surveys-free-job.json`](docs/kane-runs/s
 
 21 Aug (`kane-cli` 0.8.4): **6 / 6 passed**. Continue-submit was already fixed in that rollup.
 
-### studio-verify
+Kane surfaces the gate actually uses:
+
+| Kane surface | How studio-verify uses it |
+| --- | --- |
+| `kane/*_test.md` | Committed, human-readable Studio flows |
+| `--agent` NDJSON | The only machine-readable channel parsed |
+| `test_md_summary` | Authoritative per-file verdict (not the first `run_end`) |
+| `final_state` + memory + variables | Where `store … as` observations land |
+| Failed step heading | What the hook quotes (`Site to Brief`) |
+
+### How studio-verify decides
 
 [`packages/studio-verify`](packages/studio-verify) (`@demo-studio/verify`) is the gate, not a second product. Kane still walks Studio; this package decides *which* TestMD files to replay after a Cursor edit and whether the coding agent may stop.
 
-Committed:
-
-| Path | Role |
-| --- | --- |
-| [`.studio-verify/config.json`](.studio-verify/config.json) | Studio/API URLs, timeouts, per-flow TestMD + `protect` / `observe` keys, ignore globs |
-| [`.studio-verify/flow-map.json`](.studio-verify/flow-map.json) | Git path → flows. Empty array = “this file is not behavior.” |
-| [`.studio-verify/baseline.json`](.studio-verify/baseline.json) | Trusted Kane observations from a known-good build |
-
-Gitignored (live only): `.studio-verify/last-verify.json`, `.studio-verify/runs/*.ndjson`, `.studio-verify/state/` (lock + per-session attempt counter).
-
-```text
-git diff (unstaged + staged + untracked)
-        → drop ignore globs (Lane 3 packages, docs, kane/, the tool itself, README, lockfile)
-        → map remaining paths to flows (Home.tsx → landing + wizard + validation)
-        → unmapped studio file → fallback flow `landing` only
-        → kane-cli --local testmd run <file> --agent --headless
-        → parse NDJSON: file verdict = test_md_summary.overall_status
-          (first run_end is step one of a multi-step file — never the suite result)
-        → harvest store-as from final_state, context.variables, and context.memory
-        → compare protect keys to baseline (SAME / UNEXPECTED_CHANGE / MISSING;
-          blank stored string = MISSING, not an empty surprise)
-        → persist last-verify.json
+```mermaid
+flowchart LR
+    A["Cursor edits Studio"] --> S{"Stop hook"}
+    S --> D["git diff to .studio-verify/flow-map.json"]
+    D --> K["Kane CLI headless Chrome"]
+    K --> C{"Protected observables SAME and Kane passed?"}
+    C -- yes --> OK["stdout {} — allow stop"]
+    C -- no --> BL["stdout followup_message"]
+    BL --> A
+    K --> E[".studio-verify/last-verify.json"]
+    E --> W["/verified"]
 ```
 
-**Verdicts.** `blocked` = Kane `failed` or a protected key is `UNEXPECTED_CHANGE`. `error` = could not tell (kane-cli exit 2/3, empty stream, timeout, budget skip, Studio/API down). `passed` = every selected flow passed and no unexpected deltas. `observe` keys (today `health_ok`) are allowed to move; they never block. `MISSING` is not a block by itself — Kane still has to fail the TestMD or a protected value has to *change*. One flake retry per flow. Highest risk first (`wizard`, `validation`). Hook budget 1200s; per-test timeout 180s.
+| Object | Role |
+| --- | --- |
+| [`.studio-verify/flow-map.json`](.studio-verify/flow-map.json) | Changed path → flow keys. Empty array = “this file is not behavior.” |
+| [`.studio-verify/config.json`](.studio-verify/config.json) | Protect vs observe keys, fallback flow `landing`, attempt cap, budgets, ignore globs |
+| [`.studio-verify/baseline.json`](.studio-verify/baseline.json) | Trusted semantic observations from a green Kane run |
+| `kane/*_test.md` | Plain-English browser tests Kane replays |
+| `.studio-verify/last-verify.json` | Last verdict (gitignored) — what `/verified` prefers when present |
+| [`.cursor/hooks.json`](.cursor/hooks.json) | Stop hook: `bash .cursor/hooks/studio-verify-stop.sh` (1800s, `loop_limit` 3, `failClosed: false`) |
 
-**CLI** (`tsx packages/studio-verify/src/cli.ts`, wrapped by npm scripts):
+Same core in `verify`, `verify --all`, and `verify --flow a,b`:
 
-| Command | What it does | Exit |
-| --- | --- | --- |
-| `npm run verify:status` | Diff, blast radius, baseline observables — no browser | 0 |
-| `npm run verify:baseline [-- --flow wizard]` | Record green Kane observations; refuses to overwrite from a red run | 0 / 2 if app down |
-| `npm run verify [-- --all \| --flow a,b]` | Replay mapped (or named) flows vs baseline | 0 passed, 1 blocked, 2 error |
-| `npm run cli -w @demo-studio/verify -- hook` | Cursor stop (stdin payload). Always exit 0; block via JSON | 0 |
-| `npm run verify:plant` / `verify:restore` | Local Continue-submit drill; **do not commit** planted `Home.tsx` | — |
-| `npm run test:studio-verify` | 16 unit tests: NDJSON parse, comparator, globs (no credits) | 0/1 |
+1. **Diff** — unstaged + staged + untracked. The hook verifies what you have not committed yet.
+2. **Impact** — match paths against the flow map. Ignore Lane 3 (`packages/activities`, `workflows`, `shared`), docs, `kane/`, the tool itself. Unmapped studio files fall back to `landing`. Editing `Home.tsx` runs landing + wizard + validation.
+3. **Preflight** — is Studio `:5173` up? Is API `:4031/health` up? Is there a trusted baseline?
+4. **Run** — for each impacted flow, highest risk first (`wizard`, `validation`): `kane-cli --local testmd run <file> --agent --headless`. One flake retry. Per-test timeout 180s; hook budget 1200s.
+5. **Parse** — file verdict from `test_md_summary`, not the first `run_end`. Observations mined from `final_state`, `context.variables`, and `context.memory`. Kane exit 2/3 and an empty stream are infra, never “your UI broke.”
+6. **Compare** — each `protect` key → `SAME` / `UNEXPECTED_CHANGE` / `MISSING` (blank stored string = `MISSING`). `observe` keys (today `health_ok`) may move.
+7. **Decide** — Kane `failed` or `UNEXPECTED_CHANGE` → `blocked`. Infra / skip / app down → `error` (could not tell — never a fake pass). Otherwise `passed`. Persist `last-verify.json`.
 
-Unit tests encode the load-bearing parse: the file verdict is `test_md_summary`, not the first `run_end`; exit 2/3 is infra, never “your UI broke.”
+```bash
+npm run verify:status                          # no browser
+npm run verify:baseline [-- --flow wizard]     # record a known-good build
+npm run verify [-- --all | --flow a,b]         # 0 passed, 1 blocked, 2 error
+npm run cli -w @demo-studio/verify -- hook     # Cursor stop (stdin payload)
+npm run verify:plant / verify:restore          # local Continue-submit drill — do not commit planted Home.tsx
+npm run test:studio-verify                     # 16 unit tests
+```
 
-Blast radius (behavior-relevant only):
+Blast radius:
 
 | Glob | Flows |
 | --- | --- |
@@ -265,28 +361,45 @@ Blast radius (behavior-relevant only):
 | `packages/activities/**`, `workflows/**`, `shared/**` | ignored (Lane 3 film path) |
 | `kane/**`, `.studio-verify/**`, `.cursor/**`, `docs/**`, Pitch, Verified | ignored / no flows |
 
-`GET /v1/verified` returns `{ live, blocked, verified, baseline, source }`: live `last-verify.json` when present, else committed snapshots under `docs/kane-runs/verify/` (copied to `apps/studio/public/verified/` for the SPA).
+`GET /v1/verified` returns `{ live, blocked, verified, baseline, source }`. Committed snapshots also live under `apps/studio/public/verified/` so the SPA can render without a live report.
+
+Never edit a `_test.md` to make a failing app pass.
 
 ### Cursor stop hook
 
-[`.cursor/hooks.json`](.cursor/hooks.json) `stop` → [`studio-verify-stop.sh`](.cursor/hooks/studio-verify-stop.sh) → `tsx …/cli.ts hook`. Cursor timeout 1800s, `loop_limit` 3, `failClosed: false` (a crashed hook must not freeze the agent). Missing `tsx` prints `{}` and exits 0.
-
-Stdout contract:
+[`.cursor/hooks.json`](.cursor/hooks.json) `stop` → [`studio-verify-stop.sh`](.cursor/hooks/studio-verify-stop.sh) → `tsx …/cli.ts hook`. Cursor timeout 1800s, `loop_limit` 3, `failClosed: false` (a crashed hook must not freeze the agent). Missing `tsx` prints `{}` and exits 0. The process always exits 0; **block vs allow is the JSON**, not the exit code.
 
 | Situation | stdout | Agent |
 | --- | --- | --- |
-| No mapped flows (docs, README, Lane 3 packages, Pitch, Verified) | `{}` | may stop; no Chrome |
-| Behavioral `blocked` | `{ "followup_message": "<flow, failed step, key, baseline vs observed, NDJSON path>" }` | must continue; repair **Studio**, not TestMD / baseline |
-| Infra, no baseline, app down, lock held, attempt cap (`maxAttempts` 3), re-entry (`stop_hook_active`) | `{}` plus a log note | may stop; protected behavior was **not** confirmed |
+| No behavior-relevant files changed | `{}` | may stop; no Chrome |
+| All protected observables SAME and Kane passed | `{}` | may stop |
+| Kane `failed` or `UNEXPECTED_CHANGE`, attempts &lt; 3 | `{ "followup_message": "…" }` | **must continue** — repair Studio, not TestMD / baseline |
+| Same, attempts ≥ 3 (`maxAttempts`) | `{}` plus human-review note | may stop; escalate |
+| App down / Kane infra / no baseline / lock held / hook re-entered (`stop_hook_active`) | `{}` plus a log note | may stop; protected behavior was **not** confirmed |
 
 Requires Studio `http://localhost:5173` and API `http://localhost:4031/health`. The hook logs in Kane from `.env` if `KANE_USERNAME` / `KANE_ACCESS_KEY` are set.
 
-### Proof Kane caught a bug
+### How the demo regression was produced
 
-1. **Historical (21 Aug).** Continue on Access submitted Generate. TestMD required Launch (“Ready to record”) and a Generate URL with no `/jobs/<id>`. Fixed: Continue is `type="button"` with `onClick={next}`; form `onSubmit` only `preventDefault`s. Evidence: [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md).
-2. **Closed-loop drill (30 Aug).** `npm run verify:plant` set Continue to `type="submit"` and dropped `onClick={next}`. Kane failed at **Site to Brief** (Continue never advanced). [`blocked-run.json`](docs/kane-runs/verify/blocked-run.json) + [`verify-wizard-blocked.ndjson`](docs/kane-runs/verify/verify-wizard-blocked.ndjson). Restore; Kane passed with `launch_heading=Ready to record surveys.free` SAME. [`verified-run.json`](docs/kane-runs/verify/verified-run.json). `Home.tsx` on the branch is the good button. Runbook: [`docs/kane-runs/verify/DEMO.md`](docs/kane-runs/verify/DEMO.md). Do not prompt “fix the Continue bug” — that skips Kane.
+Being precise about this, because it is the one thing worth being precise about.
 
-[`/verified`](https://studio-production-d6af.up.railway.app/verified) renders live `GET /v1/verified` or the committed snapshots under `apps/studio/public/verified/`. Pitch includes a stop-hook slide.
+**Continue-submit was a real bug on 21 Aug.** Kane’s Studio suite required Launch (“Ready to record”) and a Generate URL with no `/jobs/<id>`. Continue on Access was `type="submit"` and posted a job. That is fixed on `main`: Continue is `type="button"` with `onClick={next}`; form `onSubmit` only `preventDefault`s. Evidence: [`docs/kane-runs/studio-e2e/RESULTS.md`](docs/kane-runs/studio-e2e/RESULTS.md).
+
+**The 30 Aug closed-loop film replanted that class of bug on purpose**, so we could show the gate closing: `npm run verify:plant` sets Continue to `type="submit"` and drops `onClick={next}` on every wizard step. Kane fails at **Site to Brief**. That plant is deliberate. No agent produced it by accident, and this README is not going to imply one did.
+
+**Everything downstream of that edit is untouched and real.** studio-verify mapped `Home.tsx` to `wizard`. Kane replayed [`studio_wizard_test.md`](kane/studio_wizard_test.md) in real Chrome. The failed step, Kane’s stuck remark, and the later `launch_heading=Ready to record surveys.free` SAME are what the browser did. Both runs are committed: [`blocked-run.json`](docs/kane-runs/verify/blocked-run.json) and [`verified-run.json`](docs/kane-runs/verify/verified-run.json), plus the NDJSON traces.
+
+The regression is not in the shipped code. `Home.tsx` on this branch is the good button. Runbook: [`docs/kane-runs/verify/DEMO.md`](docs/kane-runs/verify/DEMO.md). Do not prompt “fix the Continue bug” — that lets the agent skip Kane.
+
+[`/verified`](https://studio-production-d6af.up.railway.app/verified) renders live `GET /v1/verified` or those committed snapshots. Pitch includes a stop-hook slide.
+
+### Caveats
+
+- **Requires a running Studio and API, and a Kane login.** `verify --all` preflights `:5173` and `:4031/health`. No server → `error` verdict, not a fake pass.
+- **Cursor’s block channel is `followup_message`, not exit 2.** The CLI always exits 0 so `failClosed: false` never freezes a crashed hook. A Claude Code-style exit 2 would not stop Cursor.
+- **`MISSING` on a protect key is not, by itself, a block.** The 30 Aug plant blocked because Kane **failed** the file. An unexpected *value* (`UNEXPECTED_CHANGE`) also blocks. An observable Kane did not see cannot be certified `SAME`.
+- **Hosted `/verified` is a snapshot.** Railway does not run Kane. The live page shows committed JSON (and `GET /v1/verified` when those files are on the API host).
+- **Single coding agent in the production hook.** Wired for Cursor stop hooks; the CLI (`baseline` / `verify` / `hook` / `status`) is agent-agnostic.
 
 ## How it works
 
